@@ -2,6 +2,17 @@ import { memo, useState, useEffect, useRef } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useDiagramStore, type CLDNode as CLDNodeType } from '../store/diagramStore'
 
+const handleStyle: React.CSSProperties = {
+  width: 16,
+  height: 16,
+  background: '#3b82f6',
+  border: '2px solid white',
+  borderRadius: '50%',
+  boxShadow: '0 0 0 2px #3b82f6',
+  cursor: 'crosshair',
+  zIndex: 10,
+}
+
 function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   const { updateNodeLabel, setSelectedNode } = useDiagramStore()
   const [editing, setEditing] = useState(false)
@@ -37,7 +48,12 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
           : 'border-gray-400 hover:border-gray-600',
       ].join(' ')}
     >
-      <Handle type="target" position={Position.Top} className="!bg-gray-400" />
+      {/* 4 cardinal connection handles — all source, connectionMode=loose allows connecting to any */}
+      <Handle type="source" position={Position.Top}    id="top"    style={handleStyle} />
+      <Handle type="source" position={Position.Right}  id="right"  style={handleStyle} />
+      <Handle type="source" position={Position.Bottom} id="bottom" style={handleStyle} />
+      <Handle type="source" position={Position.Left}   id="left"   style={handleStyle} />
+
       {editing ? (
         <input
           ref={inputRef}
@@ -59,7 +75,6 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
           {data.label}
         </span>
       )}
-      <Handle type="source" position={Position.Bottom} className="!bg-gray-400" />
     </div>
   )
 }
