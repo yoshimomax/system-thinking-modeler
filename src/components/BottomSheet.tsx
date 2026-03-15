@@ -27,7 +27,7 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
           'fixed left-0 right-0 z-40 bg-white rounded-t-2xl shadow-2xl',
           'transition-transform duration-300 ease-out',
           'max-h-[65vh] flex flex-col',
-          isOpen ? 'translate-y-0' : 'translate-y-full',
+          isOpen ? 'translate-y-0 pointer-events-auto' : 'translate-y-full pointer-events-none',
         ].join(' ')}
         style={{ bottom: 'calc(56px + env(safe-area-inset-bottom))' }}
       >
