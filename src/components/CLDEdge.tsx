@@ -4,7 +4,7 @@ import { useDiagramStore, type CLDEdge as CLDEdgeType } from '../store/diagramSt
 
 const DRAG_THRESHOLD = 4
 
-/** Ellipse boundary intersection: returns distance from center to boundary along direction (nx, ny) */
+/** Ellipse boundary intersection: distance from center to boundary along direction (nx, ny) */
 function ellipseRadius(nx: number, ny: number, w: number, h: number): number {
   const a = w / 2
   const b = h / 2
@@ -38,36 +38,43 @@ function CLDEdge({
   const dy = tgtCy - srcCy
   const dist = Math.sqrt(dx * dx + dy * dy)
 
-  // Self-loop or unmeasured: skip
   if (dist < 1 || !sourceNode?.measured || !targetNode?.measured) return null
 
   const nx = dx / dist
   const ny = dy / dist
 
-  // Edge starts/ends at node boundary (ellipse approximation for pill shape)
+  // Boundary radii (used for overlap check and arrowhead placement)
   const srcR = ellipseRadius(nx, ny, sourceNode.measured.width ?? 80, sourceNode.measured.height ?? 36)
   const tgtR = ellipseRadius(nx, ny, targetNode.measured.width ?? 80, targetNode.measured.height ?? 36)
 
   if (srcR + tgtR >= dist) return null // nodes overlap
 
-  const sx = srcCx + nx * srcR
-  const sy = srcCy + ny * srcR
+  // Arrowhead tip: target boundary along the center-to-center direction
   const tx = tgtCx - nx * tgtR
   const ty = tgtCy - ny * tgtR
 
-  // Control point: through-point at t=0.5 on the quadratic bezier
-  const defaultCpX = (sx + tx) / 2
-  const defaultCpY = (sy + ty) / 2
+  // Edge path: source CENTER → target CENTER (nodes render on top, covering inner segments)
+  const defaultCpX = (srcCx + tgtCx) / 2
+  const defaultCpY = (srcCy + tgtCy) / 2
   const cx = data?.controlPoint?.x ?? defaultCpX
   const cy = data?.controlPoint?.y ?? defaultCpY
 
-  // SVG quadratic bezier Q control point such that curve passes through (cx,cy) at t=0.5
-  const qcpX = 2 * cx - 0.5 * (sx + tx)
-  const qcpY = 2 * cy - 0.5 * (sy + ty)
+  // Quadratic bezier control point so the curve passes through (cx,cy) at t=0.5
+  const qcpX = 2 * cx - 0.5 * (srcCx + tgtCx)
+  const qcpY = 2 * cy - 0.5 * (srcCy + tgtCy)
 
-  const edgePath = `M ${sx} ${sy} Q ${qcpX} ${qcpY} ${tx} ${ty}`
+  const edgePath = `M ${srcCx} ${srcCy} Q ${qcpX} ${qcpY} ${tgtCx} ${tgtCy}`
 
-  // Polarity badge: at (cx, cy) — the through-point the user controls
+  // Custom arrowhead polygon at target boundary, pointing along (nx, ny)
+  const arrowLen = 11
+  const arrowHW = 5
+  const arrowPoints = [
+    `${tx},${ty}`,
+    `${tx - nx * arrowLen + ny * arrowHW},${ty - ny * arrowLen - nx * arrowHW}`,
+    `${tx - nx * arrowLen - ny * arrowHW},${ty - ny * arrowLen + nx * arrowHW}`,
+  ].join(' ')
+
+  // Polarity badge position
   const labelX = cx
   const labelY = cy
 
@@ -82,6 +89,9 @@ function CLDEdge({
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation()
+    e.preventDefault()
+    // Stop native listeners (e.g. ReactFlow's document-level pan handler)
+    e.nativeEvent.stopImmediatePropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
     dragRef.current = {
       startX: e.clientX,
@@ -94,6 +104,8 @@ function CLDEdge({
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!dragRef.current) return
+    e.stopPropagation()
+    e.preventDefault()
     const ddx = e.clientX - dragRef.current.startX
     const ddy = e.clientY - dragRef.current.startY
     if (!dragRef.current.moved && Math.sqrt(ddx * ddx + ddy * ddy) > DRAG_THRESHOLD) {
@@ -133,20 +145,25 @@ function CLDEdge({
         onClick={() => setSelectedEdge(id)}
         style={{ cursor: 'pointer' }}
       />
-      {/* Visible edge */}
+      {/* Visible edge line (no markerEnd — custom arrowhead below) */}
       <path
         id={id}
         d={edgePath}
         stroke={strokeColor}
         strokeWidth={selected ? 3 : 2}
         fill="none"
-        markerEnd={`url(#arrow-${isPositive ? 'positive' : 'negative'})`}
         className="react-flow__edge-path"
+        style={{ pointerEvents: 'none' }}
+      />
+      {/* Custom arrowhead at target node boundary */}
+      <polygon
+        points={arrowPoints}
+        fill={strokeColor}
         style={{ pointerEvents: 'none' }}
       />
 
       <EdgeLabelRenderer>
-        {/* Polarity badge — click to toggle, drag to bend edge, double-click to reset */}
+        {/* Polarity badge — tap: toggle polarity, drag: bend edge, double-tap: reset */}
         <button
           style={{
             position: 'absolute',
@@ -166,7 +183,7 @@ function CLDEdge({
               : 'bg-red-100 border-red-600 text-red-700',
             selected ? 'ring-2 ring-blue-400 ring-offset-1' : '',
           ].join(' ')}
-          title="クリック:極性切替 / ドラッグ:曲率変更 / ダブルクリック:リセット"
+          title="タップ:極性切替 / ドラッグ:曲率変更 / ダブルタップ:リセット"
         >
           {polarity}
         </button>
