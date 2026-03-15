@@ -51,13 +51,14 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
   }
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}>
+    <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)', touchAction: 'manipulation' }}>
       <div className="flex items-center justify-around">
 
         {/* Add Node - primary action */}
         <button
-          onClick={() => addNode('変数')}
+          onPointerDown={(e) => { e.stopPropagation(); addNode('変数') }}
           className="flex flex-col items-center py-2 px-3 text-blue-600 active:opacity-60"
+          style={{ touchAction: 'manipulation' }}
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <circle cx="12" cy="12" r="9" strokeWidth="2" />
