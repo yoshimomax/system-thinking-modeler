@@ -26,8 +26,9 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     setEditing(false)
   }
 
-  // Handles are only visible (and interactive) when the node is selected.
-  // Tap a node to select it → 4 blue dots appear → drag a dot to another node to connect.
+  // Handles are always interactive so ReactFlow's hit-test logic works correctly.
+  // They are invisible until the node is selected — tap a node to reveal them,
+  // then drag a dot to another node to create a connection.
   const handleStyle: React.CSSProperties = {
     width: 16,
     height: 16,
@@ -36,7 +37,6 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     borderRadius: '50%',
     cursor: 'crosshair',
     opacity: selected ? 1 : 0,
-    pointerEvents: selected ? 'all' : 'none',
     transition: 'opacity 0.15s',
   }
 

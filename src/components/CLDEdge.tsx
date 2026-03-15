@@ -6,8 +6,8 @@ const DRAG_THRESHOLD = 4
 
 /** Ellipse boundary distance from center along direction (nx, ny) */
 function ellipseRadius(nx: number, ny: number, w: number, h: number): number {
-  const a = w / 2
-  const b = h / 2
+  const a = Math.max(1, w / 2)
+  const b = Math.max(1, h / 2)
   return 1 / Math.sqrt((nx / a) ** 2 + (ny / b) ** 2)
 }
 
@@ -39,16 +39,21 @@ function bezierTangent(
 }
 
 /**
- * Binary search for the t value where the bezier first enters the target ellipse
- * (transitions from outside to inside as t increases toward 1).
+ * Binary search for t where the bezier first enters the target ellipse.
  * Assumes t=0 is outside and t=1 (target center) is inside.
  */
 function findEllipseEntryT(
   p0x: number, p0y: number,
   p1x: number, p1y: number,
   p2x: number, p2y: number,
-  cx: number, cy: number, a: number, b: number,
+  cx: number, cy: number,
+  a: number, b: number,  // must be > 0
 ): number {
+  // Verify t=0 is outside and t=1 is inside; if not, return a safe fallback
+  const p0 = bezierPoint(0, p0x, p0y, p1x, p1y, p2x, p2y)
+  const insideAtZero = ((p0.x - cx) / a) ** 2 + ((p0.y - cy) / b) ** 2 < 1
+  if (insideAtZero) return 0 // degenerate: source center is inside target
+
   let tLo = 0, tHi = 1
   for (let i = 0; i < 24; i++) {
     const tMid = (tLo + tHi) / 2
@@ -74,6 +79,15 @@ function CLDEdge({
   const isPositive = polarity === '+'
   const strokeColor = isPositive ? '#16a34a' : '#dc2626'
 
+  // Drag state — must be declared before any early return
+  const dragRef = useRef<{
+    startX: number
+    startY: number
+    cpX: number
+    cpY: number
+    moved: boolean
+  } | null>(null)
+
   const sourceNode = nodes.find((n) => n.id === source)
   const targetNode = nodes.find((n) => n.id === target)
 
@@ -87,34 +101,49 @@ function CLDEdge({
   const dy = tgtCy - srcCy
   const dist = Math.sqrt(dx * dx + dy * dy)
 
-  if (dist < 1 || !sourceNode?.measured || !targetNode?.measured) return null
+  // Guard: nodes unmeasured, same position, or not found
+  if (
+    dist < 1 ||
+    !sourceNode?.measured?.width ||
+    !sourceNode?.measured?.height ||
+    !targetNode?.measured?.width ||
+    !targetNode?.measured?.height
+  ) return null
 
   const nx = dx / dist
   const ny = dy / dist
 
-  // Overlap check using straight-line radii
-  const srcR = ellipseRadius(nx, ny, sourceNode.measured.width ?? 80, sourceNode.measured.height ?? 36)
-  const tgtR = ellipseRadius(nx, ny, targetNode.measured.width ?? 80, targetNode.measured.height ?? 36)
+  // Overlap check
+  const srcR = ellipseRadius(nx, ny, sourceNode.measured.width, sourceNode.measured.height)
+  const tgtR = ellipseRadius(nx, ny, targetNode.measured.width, targetNode.measured.height)
   if (srcR + tgtR >= dist) return null
 
-  // Path: source center → target center (nodes render on top, hiding inner segments)
+  // Control point
   const defaultCpX = (srcCx + tgtCx) / 2
   const defaultCpY = (srcCy + tgtCy) / 2
   const cx = data?.controlPoint?.x ?? defaultCpX
   const cy = data?.controlPoint?.y ?? defaultCpY
 
-  // Bezier control point such that the curve passes through (cx, cy) at t=0.5
+  // Bezier control point (passes through cx,cy at t=0.5)
   const qcpX = 2 * cx - 0.5 * (srcCx + tgtCx)
   const qcpY = 2 * cy - 0.5 * (srcCy + tgtCy)
 
+  // Path: source center → target center
   const edgePath = `M ${srcCx} ${srcCy} Q ${qcpX} ${qcpY} ${tgtCx} ${tgtCy}`
 
-  // Arrowhead: find exact bezier-ellipse intersection for position and tangent direction
-  const tgtA = (targetNode.measured.width ?? 80) / 2
-  const tgtB = (targetNode.measured.height ?? 36) / 2
+  // Arrowhead: exact bezier–ellipse intersection
+  const tgtA = Math.max(1, targetNode.measured.width / 2)
+  const tgtB = Math.max(1, targetNode.measured.height / 2)
   const arrowT = findEllipseEntryT(srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy, tgtCx, tgtCy, tgtA, tgtB)
   const arrowPos = bezierPoint(arrowT, srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy)
   const arrowDir = bezierTangent(arrowT, srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy)
+
+  // Guard: reject any NaN/Infinity that slipped through
+  if (
+    !Number.isFinite(arrowPos.x) || !Number.isFinite(arrowPos.y) ||
+    !Number.isFinite(arrowDir.x) || !Number.isFinite(arrowDir.y) ||
+    !Number.isFinite(qcpX)       || !Number.isFinite(qcpY)
+  ) return null
 
   const arrowLen = 11
   const arrowHW = 5
@@ -124,18 +153,8 @@ function CLDEdge({
     `${arrowPos.x - arrowDir.x * arrowLen - arrowDir.y * arrowHW},${arrowPos.y - arrowDir.y * arrowLen + arrowDir.x * arrowHW}`,
   ].join(' ')
 
-  // Badge position
   const labelX = cx
   const labelY = cy
-
-  // Drag state
-  const dragRef = useRef<{
-    startX: number
-    startY: number
-    cpX: number
-    cpY: number
-    moved: boolean
-  } | null>(null)
 
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation()
@@ -203,7 +222,7 @@ function CLDEdge({
         className="react-flow__edge-path"
         style={{ pointerEvents: 'none' }}
       />
-      {/* Arrowhead at exact bezier-ellipse intersection */}
+      {/* Arrowhead at exact bezier–ellipse intersection */}
       <polygon
         points={arrowPoints}
         fill={strokeColor}
@@ -211,7 +230,7 @@ function CLDEdge({
       />
 
       <EdgeLabelRenderer>
-        {/* Polarity badge — nopan prevents ReactFlow from panning when dragging badge */}
+        {/* Polarity badge — nopan: ReactFlow skips pan logic on this element */}
         <button
           className={[
             'nopan',
