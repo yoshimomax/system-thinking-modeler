@@ -2,17 +2,6 @@ import { memo, useState, useEffect, useRef } from 'react'
 import { Handle, Position, type NodeProps } from '@xyflow/react'
 import { useDiagramStore, type CLDNode as CLDNodeType } from '../store/diagramStore'
 
-const handleStyle: React.CSSProperties = {
-  width: 16,
-  height: 16,
-  background: '#3b82f6',
-  border: '2px solid white',
-  borderRadius: '50%',
-  boxShadow: '0 0 0 2px #3b82f6',
-  cursor: 'crosshair',
-  zIndex: 10,
-}
-
 function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   const { updateNodeLabel, setSelectedNode } = useDiagramStore()
   const [editing, setEditing] = useState(false)
@@ -37,6 +26,20 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     setEditing(false)
   }
 
+  // Handles are only visible (and interactive) when the node is selected.
+  // Tap a node to select it → 4 blue dots appear → drag a dot to another node to connect.
+  const handleStyle: React.CSSProperties = {
+    width: 16,
+    height: 16,
+    background: '#3b82f6',
+    border: '2px solid white',
+    borderRadius: '50%',
+    cursor: 'crosshair',
+    opacity: selected ? 1 : 0,
+    pointerEvents: selected ? 'all' : 'none',
+    transition: 'opacity 0.15s',
+  }
+
   return (
     <div
       onDoubleClick={() => setEditing(true)}
@@ -48,7 +51,6 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
           : 'border-gray-400 hover:border-gray-600',
       ].join(' ')}
     >
-      {/* 4 cardinal connection handles — all source, connectionMode=loose allows connecting to any */}
       <Handle type="source" position={Position.Top}    id="top"    style={handleStyle} />
       <Handle type="source" position={Position.Right}  id="right"  style={handleStyle} />
       <Handle type="source" position={Position.Bottom} id="bottom" style={handleStyle} />

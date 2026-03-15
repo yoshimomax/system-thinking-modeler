@@ -4,11 +4,60 @@ import { useDiagramStore, type CLDEdge as CLDEdgeType } from '../store/diagramSt
 
 const DRAG_THRESHOLD = 4
 
-/** Ellipse boundary intersection: distance from center to boundary along direction (nx, ny) */
+/** Ellipse boundary distance from center along direction (nx, ny) */
 function ellipseRadius(nx: number, ny: number, w: number, h: number): number {
   const a = w / 2
   const b = h / 2
   return 1 / Math.sqrt((nx / a) ** 2 + (ny / b) ** 2)
+}
+
+/** Point on quadratic bezier at parameter t */
+function bezierPoint(
+  t: number,
+  p0x: number, p0y: number,
+  p1x: number, p1y: number,
+  p2x: number, p2y: number,
+) {
+  const mt = 1 - t
+  return {
+    x: mt * mt * p0x + 2 * mt * t * p1x + t * t * p2x,
+    y: mt * mt * p0y + 2 * mt * t * p1y + t * t * p2y,
+  }
+}
+
+/** Unit tangent of quadratic bezier at parameter t */
+function bezierTangent(
+  t: number,
+  p0x: number, p0y: number,
+  p1x: number, p1y: number,
+  p2x: number, p2y: number,
+) {
+  const dx = 2 * (1 - t) * (p1x - p0x) + 2 * t * (p2x - p1x)
+  const dy = 2 * (1 - t) * (p1y - p0y) + 2 * t * (p2y - p1y)
+  const d = Math.sqrt(dx * dx + dy * dy)
+  return { x: d > 0 ? dx / d : 1, y: d > 0 ? dy / d : 0 }
+}
+
+/**
+ * Binary search for the t value where the bezier first enters the target ellipse
+ * (transitions from outside to inside as t increases toward 1).
+ * Assumes t=0 is outside and t=1 (target center) is inside.
+ */
+function findEllipseEntryT(
+  p0x: number, p0y: number,
+  p1x: number, p1y: number,
+  p2x: number, p2y: number,
+  cx: number, cy: number, a: number, b: number,
+): number {
+  let tLo = 0, tHi = 1
+  for (let i = 0; i < 24; i++) {
+    const tMid = (tLo + tHi) / 2
+    const p = bezierPoint(tMid, p0x, p0y, p1x, p1y, p2x, p2y)
+    const inside = ((p.x - cx) / a) ** 2 + ((p.y - cy) / b) ** 2 < 1
+    if (inside) tHi = tMid
+    else tLo = tMid
+  }
+  return (tLo + tHi) / 2
 }
 
 function CLDEdge({
@@ -28,7 +77,7 @@ function CLDEdge({
   const sourceNode = nodes.find((n) => n.id === source)
   const targetNode = nodes.find((n) => n.id === target)
 
-  // Node centers in flow coordinates
+  // Node centers
   const srcCx = (sourceNode?.position.x ?? 0) + (sourceNode?.measured?.width ?? 80) / 2
   const srcCy = (sourceNode?.position.y ?? 0) + (sourceNode?.measured?.height ?? 36) / 2
   const tgtCx = (targetNode?.position.x ?? 0) + (targetNode?.measured?.width ?? 80) / 2
@@ -43,38 +92,39 @@ function CLDEdge({
   const nx = dx / dist
   const ny = dy / dist
 
-  // Boundary radii (used for overlap check and arrowhead placement)
+  // Overlap check using straight-line radii
   const srcR = ellipseRadius(nx, ny, sourceNode.measured.width ?? 80, sourceNode.measured.height ?? 36)
   const tgtR = ellipseRadius(nx, ny, targetNode.measured.width ?? 80, targetNode.measured.height ?? 36)
+  if (srcR + tgtR >= dist) return null
 
-  if (srcR + tgtR >= dist) return null // nodes overlap
-
-  // Arrowhead tip: target boundary along the center-to-center direction
-  const tx = tgtCx - nx * tgtR
-  const ty = tgtCy - ny * tgtR
-
-  // Edge path: source CENTER → target CENTER (nodes render on top, covering inner segments)
+  // Path: source center → target center (nodes render on top, hiding inner segments)
   const defaultCpX = (srcCx + tgtCx) / 2
   const defaultCpY = (srcCy + tgtCy) / 2
   const cx = data?.controlPoint?.x ?? defaultCpX
   const cy = data?.controlPoint?.y ?? defaultCpY
 
-  // Quadratic bezier control point so the curve passes through (cx,cy) at t=0.5
+  // Bezier control point such that the curve passes through (cx, cy) at t=0.5
   const qcpX = 2 * cx - 0.5 * (srcCx + tgtCx)
   const qcpY = 2 * cy - 0.5 * (srcCy + tgtCy)
 
   const edgePath = `M ${srcCx} ${srcCy} Q ${qcpX} ${qcpY} ${tgtCx} ${tgtCy}`
 
-  // Custom arrowhead polygon at target boundary, pointing along (nx, ny)
+  // Arrowhead: find exact bezier-ellipse intersection for position and tangent direction
+  const tgtA = (targetNode.measured.width ?? 80) / 2
+  const tgtB = (targetNode.measured.height ?? 36) / 2
+  const arrowT = findEllipseEntryT(srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy, tgtCx, tgtCy, tgtA, tgtB)
+  const arrowPos = bezierPoint(arrowT, srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy)
+  const arrowDir = bezierTangent(arrowT, srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy)
+
   const arrowLen = 11
   const arrowHW = 5
   const arrowPoints = [
-    `${tx},${ty}`,
-    `${tx - nx * arrowLen + ny * arrowHW},${ty - ny * arrowLen - nx * arrowHW}`,
-    `${tx - nx * arrowLen - ny * arrowHW},${ty - ny * arrowLen + nx * arrowHW}`,
+    `${arrowPos.x},${arrowPos.y}`,
+    `${arrowPos.x - arrowDir.x * arrowLen + arrowDir.y * arrowHW},${arrowPos.y - arrowDir.y * arrowLen - arrowDir.x * arrowHW}`,
+    `${arrowPos.x - arrowDir.x * arrowLen - arrowDir.y * arrowHW},${arrowPos.y - arrowDir.y * arrowLen + arrowDir.x * arrowHW}`,
   ].join(' ')
 
-  // Polarity badge position
+  // Badge position
   const labelX = cx
   const labelY = cy
 
@@ -90,8 +140,6 @@ function CLDEdge({
   const handlePointerDown = (e: React.PointerEvent) => {
     e.stopPropagation()
     e.preventDefault()
-    // Stop native listeners (e.g. ReactFlow's document-level pan handler)
-    e.nativeEvent.stopImmediatePropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
     dragRef.current = {
       startX: e.clientX,
@@ -145,7 +193,7 @@ function CLDEdge({
         onClick={() => setSelectedEdge(id)}
         style={{ cursor: 'pointer' }}
       />
-      {/* Visible edge line (no markerEnd — custom arrowhead below) */}
+      {/* Visible edge line */}
       <path
         id={id}
         d={edgePath}
@@ -155,7 +203,7 @@ function CLDEdge({
         className="react-flow__edge-path"
         style={{ pointerEvents: 'none' }}
       />
-      {/* Custom arrowhead at target node boundary */}
+      {/* Arrowhead at exact bezier-ellipse intersection */}
       <polygon
         points={arrowPoints}
         fill={strokeColor}
@@ -163,8 +211,16 @@ function CLDEdge({
       />
 
       <EdgeLabelRenderer>
-        {/* Polarity badge — tap: toggle polarity, drag: bend edge, double-tap: reset */}
+        {/* Polarity badge — nopan prevents ReactFlow from panning when dragging badge */}
         <button
+          className={[
+            'nopan',
+            'w-6 h-6 rounded-full border-2 text-xs font-bold flex items-center justify-center shadow-sm select-none',
+            isPositive
+              ? 'bg-green-100 border-green-600 text-green-700'
+              : 'bg-red-100 border-red-600 text-red-700',
+            selected ? 'ring-2 ring-blue-400 ring-offset-1' : '',
+          ].join(' ')}
           style={{
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
@@ -176,13 +232,6 @@ function CLDEdge({
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onDoubleClick={handleDoubleClick}
-          className={[
-            'w-6 h-6 rounded-full border-2 text-xs font-bold flex items-center justify-center shadow-sm select-none',
-            isPositive
-              ? 'bg-green-100 border-green-600 text-green-700'
-              : 'bg-red-100 border-red-600 text-red-700',
-            selected ? 'ring-2 ring-blue-400 ring-offset-1' : '',
-          ].join(' ')}
           title="タップ:極性切替 / ドラッグ:曲率変更 / ダブルタップ:リセット"
         >
           {polarity}
