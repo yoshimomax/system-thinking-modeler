@@ -14,6 +14,7 @@ export type Polarity = '+' | '-'
 
 export interface CLDEdgeData extends Record<string, unknown> {
   polarity: Polarity
+  controlPoint?: { x: number; y: number }
 }
 
 export interface CLDNodeData extends Record<string, unknown> {
@@ -45,6 +46,7 @@ interface DiagramState {
   deleteNode: (id: string) => void
 
   toggleEdgePolarity: (id: string) => void
+  updateEdgeControlPoint: (id: string, cp: { x: number; y: number } | null) => void
   deleteEdge: (id: string) => void
 
   setSelectedNode: (id: string | null) => void
@@ -176,6 +178,18 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
       const loops = detectFeedbackLoops(state.nodes, edges)
       return { edges, loops }
     })
+  },
+
+  updateEdgeControlPoint: (id, cp) => {
+    set((state) => ({
+      edges: state.edges.map((e) => {
+        if (e.id !== id) return e
+        const data: CLDEdgeData = cp
+          ? { ...e.data!, controlPoint: cp }
+          : { polarity: e.data?.polarity ?? '+' }
+        return { ...e, data }
+      }) as CLDEdge[],
+    }))
   },
 
   deleteEdge: (id) => {
