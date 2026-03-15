@@ -1,5 +1,4 @@
 import { useRef } from 'react'
-import { useReactFlow } from '@xyflow/react'
 import { useDiagramStore, type CLDNode, type CLDEdge } from '../store/diagramStore'
 
 interface Props {
@@ -9,7 +8,6 @@ interface Props {
 
 export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
   const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
-  const { getViewport, fitView } = useReactFlow()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = () => {
@@ -58,23 +56,7 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
 
         {/* Add Node - primary action */}
         <button
-          onClick={() => {
-            // Compute flow-space center from viewport transform
-            const { x: panX, y: panY, zoom } = getViewport()
-            const rfEl = document.querySelector('.react-flow')
-            const rect = rfEl?.getBoundingClientRect()
-            const w = rect?.width ?? window.innerWidth
-            const h = rect?.height ?? window.innerHeight
-            const pos = {
-              x: (w / 2 - panX) / zoom - 40,
-              y: (h / 2 - panY) / zoom - 18,
-            }
-            const newId = addNode('変数', pos)
-            // Guarantee the new node is visible
-            requestAnimationFrame(() => {
-              fitView({ nodes: [{ id: newId }], duration: 300, padding: 0.5, maxZoom: 1.2 })
-            })
-          }}
+          onClick={() => addNode('変数')}
           className="flex flex-col items-center py-2 px-3 text-blue-600 active:opacity-60"
         >
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
