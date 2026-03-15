@@ -1,9 +1,10 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 import {
   ReactFlow,
   Background,
   Controls,
   MiniMap,
+  useReactFlow,
   type NodeTypes,
   type EdgeTypes,
   type OnSelectionChangeParams,
@@ -29,6 +30,21 @@ export default function DiagramCanvas() {
     selectedNodeId,
     selectedEdgeId,
   } = useDiagramStore()
+
+  const { fitView } = useReactFlow()
+  const prevNodeCount = useRef(nodes.length)
+
+  // On mobile: whenever a node is added, fit the view to show it
+  useEffect(() => {
+    if (nodes.length > prevNodeCount.current && window.innerWidth < 768) {
+      prevNodeCount.current = nodes.length
+      setTimeout(() => {
+        fitView({ duration: 300, padding: 0.4, maxZoom: 1 })
+      }, 80)
+    } else {
+      prevNodeCount.current = nodes.length
+    }
+  }, [nodes.length, fitView])
 
   const onSelectionChange = useCallback(
     ({ nodes: sNodes, edges: sEdges }: OnSelectionChangeParams) => {

@@ -1,26 +1,12 @@
 import { useRef } from 'react'
-import { useReactFlow } from '@xyflow/react'
 import { useDiagramStore, type CLDNode, type CLDEdge } from '../store/diagramStore'
 
 export default function Toolbar() {
   const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
-  const { getViewport, fitView } = useReactFlow()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleAddNode = () => {
-    const { x: panX, y: panY, zoom } = getViewport()
-    const rfEl = document.querySelector('.react-flow')
-    const rect = rfEl?.getBoundingClientRect()
-    const w = rect?.width ?? window.innerWidth
-    const h = rect?.height ?? window.innerHeight
-    const pos = {
-      x: (w / 2 - panX) / zoom - 40,
-      y: (h / 2 - panY) / zoom - 18,
-    }
-    const newId = addNode('変数', pos)
-    requestAnimationFrame(() => {
-      fitView({ nodes: [{ id: newId }], duration: 200, padding: 0.5, maxZoom: 1.2 })
-    })
+    addNode('変数')
   }
 
   const handleSave = () => {
