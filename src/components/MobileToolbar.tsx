@@ -9,7 +9,7 @@ interface Props {
 
 export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
   const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
-  const { screenToFlowPosition } = useReactFlow()
+  const { getViewport, fitView } = useReactFlow()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = () => {
@@ -59,13 +59,21 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
         {/* Add Node - primary action */}
         <button
           onClick={() => {
-            const el = document.querySelector('.react-flow')
-            const rect = el?.getBoundingClientRect()
-            const pos = screenToFlowPosition({
-              x: rect ? rect.left + rect.width / 2 : window.innerWidth / 2,
-              y: rect ? rect.top + rect.height / 2 : window.innerHeight / 2,
+            // Compute flow-space center from viewport transform
+            const { x: panX, y: panY, zoom } = getViewport()
+            const rfEl = document.querySelector('.react-flow')
+            const rect = rfEl?.getBoundingClientRect()
+            const w = rect?.width ?? window.innerWidth
+            const h = rect?.height ?? window.innerHeight
+            const pos = {
+              x: (w / 2 - panX) / zoom - 40,
+              y: (h / 2 - panY) / zoom - 18,
+            }
+            const newId = addNode('変数', pos)
+            // Guarantee the new node is visible
+            requestAnimationFrame(() => {
+              fitView({ nodes: [{ id: newId }], duration: 300, padding: 0.5, maxZoom: 1.2 })
             })
-            addNode('変数', pos)
           }}
           className="flex flex-col items-center py-2 px-3 text-blue-600 active:opacity-60"
         >

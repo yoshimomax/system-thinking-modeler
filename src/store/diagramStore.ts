@@ -41,7 +41,7 @@ interface DiagramState {
   onEdgesChange: (changes: EdgeChange[]) => void
   onConnect: (connection: Connection) => void
 
-  addNode: (label: string, position?: { x: number; y: number }) => void
+  addNode: (label: string, position?: { x: number; y: number }) => string
   updateNodeLabel: (id: string, label: string) => void
   deleteNode: (id: string) => void
 
@@ -149,6 +149,7 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
       data: { label },
     }
     set((state) => ({ nodes: [...state.nodes, newNode] }))
+    return id
   },
 
   updateNodeLabel: (id, label) => {
