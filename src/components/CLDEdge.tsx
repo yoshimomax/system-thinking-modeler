@@ -88,7 +88,7 @@ function CLDEdge({
   const polarity = data?.polarity ?? '+'
   const isPositive = polarity === '+'
   const baseColor = isPositive ? '#16a34a' : '#dc2626'
-  const strokeColor = isLoopHighlighted ? '#f59e0b' : baseColor
+  const strokeColor = baseColor  // color unchanged on highlight; thickness carries the emphasis
 
   // Drag state — must be declared before any early return
   const dragRef = useRef<{
