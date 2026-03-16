@@ -43,6 +43,7 @@ export default function DiagramCanvas() {
     onConnect,
     setSelectedNode,
     setSelectedEdge,
+    setSelectedLoop,
     deleteNode,
     deleteEdge,
     selectedNodeId,
@@ -122,6 +123,7 @@ export default function DiagramCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
+        onPaneClick={() => setSelectedLoop(null)}
         onSelectionChange={onSelectionChange}
         connectionMode={ConnectionMode.Loose}
         connectionLineType={ConnectionLineType.Straight}
