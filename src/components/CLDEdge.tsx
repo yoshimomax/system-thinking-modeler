@@ -232,7 +232,7 @@ function CLDEdge({
         style={{
           pointerEvents: 'none',
           stroke: strokeColor,
-          strokeWidth: isLoopHighlighted ? 3.5 : selected ? 2.5 : 2,
+          strokeWidth: isLoopHighlighted ? 3.5 : selected ? 3 : 2.5,
         }}
       />
       {/* Arrowhead at exact bezier–ellipse intersection */}
