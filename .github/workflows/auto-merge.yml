@@ -8,6 +8,8 @@ on:
 permissions:
   contents: write
   pull-requests: write
+  pages: write
+  id-token: write
 
 jobs:
   auto-merge:
@@ -22,26 +24,43 @@ jobs:
 
       - run: npm ci
 
-      # Build must pass before merging
+      # Fail fast before touching main
       - name: Type check and build
         run: npx tsc --noEmit && npm run build
 
-      - name: Create PR if none exists
+      - name: Create PR and merge into main
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           BRANCH="${{ github.ref_name }}"
-          EXISTING=$(gh pr list --head "$BRANCH" --base main --json number -q '.[0].number')
-          if [ -z "$EXISTING" ]; then
-            gh pr create \
+
+          # Reuse open PR if it exists, otherwise create one and capture its number
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --base main --json number -q '.[0].number')
+          if [ -z "$PR_NUMBER" ]; then
+            PR_URL=$(gh pr create \
               --title "Auto: $BRANCH" \
               --body "Automated PR from \`$BRANCH\`" \
               --base main \
-              --head "$BRANCH"
+              --head "$BRANCH")
+            echo "Created: $PR_URL"
+            PR_NUMBER=$(echo "$PR_URL" | grep -oE '[0-9]+$')
           fi
 
-      - name: Merge PR into main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh pr merge "${{ github.ref_name }}" --merge --delete-branch=false
+          echo "Merging PR #$PR_NUMBER"
+          gh pr merge "$PR_NUMBER" --merge --delete-branch=false
+
+      # GITHUB_TOKEN pushes don't trigger other workflows, so deploy explicitly
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    needs: auto-merge
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@v4
+        id: deployment
