@@ -53,7 +53,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
       className={[
         'px-4 py-2 rounded-full border-2 bg-white shadow-sm cursor-pointer select-none min-w-[80px] text-center',
         isLoopHighlighted
-          ? 'border-amber-400 shadow-amber-200 shadow-md'
+          ? 'border-gray-700 ring-[3px] ring-gray-500 ring-offset-0 shadow-md'
           : selected
             ? 'border-blue-500 shadow-blue-200 shadow-md'
             : 'border-gray-400 hover:border-gray-600',
@@ -97,7 +97,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
           style={{ minWidth: '60px', maxWidth: '160px' }}
         />
       ) : (
-        <span className="text-sm font-medium text-gray-800 whitespace-nowrap">
+        <span className={`text-sm whitespace-nowrap ${isLoopHighlighted ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
           {data.label}
         </span>
       )}
