@@ -6,6 +6,7 @@ import {
   MiniMap,
   useReactFlow,
   ConnectionMode,
+  ConnectionLineType,
   type NodeTypes,
   type EdgeTypes,
   type OnSelectionChangeParams,
@@ -107,6 +108,8 @@ export default function DiagramCanvas() {
         onConnect={onConnect}
         onSelectionChange={onSelectionChange}
         connectionMode={ConnectionMode.Loose}
+        connectionLineType={ConnectionLineType.Straight}
+        connectionRadius={50}
         fitView
         deleteKeyCode={null}
       >

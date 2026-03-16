@@ -28,6 +28,7 @@ export interface LoopInfo {
   id: string
   nodeIds: string[]
   type: 'R' | 'B' // Reinforcing or Balancing
+  name?: string
 }
 
 interface DiagramState {
@@ -36,6 +37,7 @@ interface DiagramState {
   loops: LoopInfo[]
   selectedNodeId: string | null
   selectedEdgeId: string | null
+  selectedLoopId: string | null
 
   onNodesChange: (changes: NodeChange[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
@@ -51,6 +53,8 @@ interface DiagramState {
 
   setSelectedNode: (id: string | null) => void
   setSelectedEdge: (id: string | null) => void
+  setSelectedLoop: (id: string | null) => void
+  updateLoopName: (id: string, name: string) => void
 
   detectLoops: () => void
   loadDiagram: (nodes: CLDNode[], edges: CLDEdge[]) => void
@@ -58,6 +62,33 @@ interface DiagramState {
 }
 
 let nodeCounter = 1
+
+/** Canonical key for a loop (path without the repeated endpoint) — stable across recalculations */
+function loopKey(loop: LoopInfo): string {
+  return loop.nodeIds.slice(0, -1).join(',')
+}
+
+/** Carry over names from old loops to newly detected loops by matching canonical keys */
+function mergeLoopNames(newLoops: LoopInfo[], oldLoops: LoopInfo[]): LoopInfo[] {
+  return newLoops.map(nl => {
+    const key = loopKey(nl)
+    const old = oldLoops.find(ol => loopKey(ol) === key)
+    return old?.name ? { ...nl, name: old.name } : nl
+  })
+}
+
+/** Preserve selectedLoopId across recalculations by canonical-key matching */
+function preserveSelection(
+  selectedId: string | null,
+  oldLoops: LoopInfo[],
+  newLoops: LoopInfo[]
+): string | null {
+  if (!selectedId) return null
+  const old = oldLoops.find(l => l.id === selectedId)
+  if (!old) return null
+  const match = newLoops.find(nl => loopKey(nl) === loopKey(old))
+  return match?.id ?? null
+}
 
 function detectFeedbackLoops(
   nodes: CLDNode[],
@@ -84,7 +115,6 @@ function detectFeedbackLoops(
     for (const { to, polarity } of neighbors) {
       const newPolarity = polarityCount + (polarity === '-' ? 1 : 0)
       if (to === startId && path.length >= 2) {
-        // Found a loop - avoid duplicates by requiring startId to be min
         const isMinStart = path.every((id) => startId <= id)
         if (isMinStart) {
           const isBalancing = newPolarity % 2 === 1
@@ -116,6 +146,7 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   loops: [],
   selectedNodeId: null,
   selectedEdgeId: null,
+  selectedLoopId: null,
 
   onNodesChange: (changes) => {
     set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as CLDNode[] }))
@@ -135,8 +166,10 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
     } as CLDEdge
     set((state) => {
       const edges = addEdge(newEdge, state.edges) as CLDEdge[]
-      const loops = detectFeedbackLoops(state.nodes, edges)
-      return { edges, loops }
+      const rawLoops = detectFeedbackLoops(state.nodes, edges)
+      const loops = mergeLoopNames(rawLoops, state.loops)
+      const selectedLoopId = preserveSelection(state.selectedLoopId, state.loops, loops)
+      return { edges, loops, selectedLoopId }
     })
   },
 
@@ -164,8 +197,10 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
     set((state) => {
       const nodes = state.nodes.filter((n) => n.id !== id)
       const edges = state.edges.filter((e) => e.source !== id && e.target !== id)
-      const loops = detectFeedbackLoops(nodes, edges)
-      return { nodes, edges, loops, selectedNodeId: null }
+      const rawLoops = detectFeedbackLoops(nodes, edges)
+      const loops = mergeLoopNames(rawLoops, state.loops)
+      const selectedLoopId = preserveSelection(state.selectedLoopId, state.loops, loops)
+      return { nodes, edges, loops, selectedLoopId, selectedNodeId: null }
     })
   },
 
@@ -176,8 +211,10 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
           ? { ...e, data: { ...e.data, polarity: (e.data?.polarity === '+' ? '-' : '+') as Polarity } }
           : e
       ) as CLDEdge[]
-      const loops = detectFeedbackLoops(state.nodes, edges)
-      return { edges, loops }
+      const rawLoops = detectFeedbackLoops(state.nodes, edges)
+      const loops = mergeLoopNames(rawLoops, state.loops)
+      const selectedLoopId = preserveSelection(state.selectedLoopId, state.loops, loops)
+      return { edges, loops, selectedLoopId }
     })
   },
 
@@ -196,13 +233,22 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   deleteEdge: (id) => {
     set((state) => {
       const edges = state.edges.filter((e) => e.id !== id)
-      const loops = detectFeedbackLoops(state.nodes, edges)
-      return { edges, loops, selectedEdgeId: null }
+      const rawLoops = detectFeedbackLoops(state.nodes, edges)
+      const loops = mergeLoopNames(rawLoops, state.loops)
+      const selectedLoopId = preserveSelection(state.selectedLoopId, state.loops, loops)
+      return { edges, loops, selectedLoopId, selectedEdgeId: null }
     })
   },
 
   setSelectedNode: (id) => set({ selectedNodeId: id, selectedEdgeId: null }),
   setSelectedEdge: (id) => set({ selectedEdgeId: id, selectedNodeId: null }),
+  setSelectedLoop: (id) => set({ selectedLoopId: id }),
+
+  updateLoopName: (id, name) => {
+    set((state) => ({
+      loops: state.loops.map(l => l.id === id ? { ...l, name } : l),
+    }))
+  },
 
   detectLoops: () => {
     const { nodes, edges } = get()
@@ -212,8 +258,11 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
 
   loadDiagram: (nodes, edges) => {
     const loops = detectFeedbackLoops(nodes, edges)
-    set({ nodes, edges, loops, selectedNodeId: null, selectedEdgeId: null })
+    set({ nodes, edges, loops, selectedNodeId: null, selectedEdgeId: null, selectedLoopId: null })
   },
 
-  clearDiagram: () => set({ nodes: [], edges: [], loops: [], selectedNodeId: null, selectedEdgeId: null }),
+  clearDiagram: () => set({
+    nodes: [], edges: [], loops: [],
+    selectedNodeId: null, selectedEdgeId: null, selectedLoopId: null,
+  }),
 }))

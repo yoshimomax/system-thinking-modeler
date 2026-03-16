@@ -75,9 +75,20 @@ function CLDEdge({
   const { nodes, toggleEdgePolarity, setSelectedEdge, updateEdgeControlPoint } = useDiagramStore()
   const { getZoom } = useReactFlow()
 
+  const isLoopHighlighted = useDiagramStore((state) => {
+    if (!state.selectedLoopId) return false
+    const loop = state.loops.find((l) => l.id === state.selectedLoopId)
+    if (!loop) return false
+    for (let i = 0; i < loop.nodeIds.length - 1; i++) {
+      if (loop.nodeIds[i] === source && loop.nodeIds[i + 1] === target) return true
+    }
+    return false
+  })
+
   const polarity = data?.polarity ?? '+'
   const isPositive = polarity === '+'
-  const strokeColor = isPositive ? '#16a34a' : '#dc2626'
+  const baseColor = isPositive ? '#16a34a' : '#dc2626'
+  const strokeColor = isLoopHighlighted ? '#f59e0b' : baseColor
 
   // Drag state — must be declared before any early return
   const dragRef = useRef<{
@@ -217,7 +228,7 @@ function CLDEdge({
         id={id}
         d={edgePath}
         stroke={strokeColor}
-        strokeWidth={selected ? 3 : 2}
+        strokeWidth={selected || isLoopHighlighted ? 3 : 2}
         fill="none"
         className="react-flow__edge-path"
         style={{ pointerEvents: 'none' }}
