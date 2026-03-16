@@ -227,11 +227,13 @@ function CLDEdge({
       <path
         id={id}
         d={edgePath}
-        stroke={strokeColor}
-        strokeWidth={isLoopHighlighted ? 4 : selected ? 3 : 2}
         fill="none"
         className="react-flow__edge-path"
-        style={{ pointerEvents: 'none' }}
+        style={{
+          pointerEvents: 'none',
+          stroke: strokeColor,
+          strokeWidth: isLoopHighlighted ? 4 : selected ? 3 : 2,
+        }}
       />
       {/* Arrowhead at exact bezier–ellipse intersection */}
       <polygon
