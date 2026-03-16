@@ -87,8 +87,7 @@ function CLDEdge({
 
   const polarity = data?.polarity ?? '+'
   const isPositive = polarity === '+'
-  const baseColor = isPositive ? '#16a34a' : '#dc2626'
-  const strokeColor = baseColor  // color unchanged on highlight; thickness carries the emphasis
+  const strokeColor = isLoopHighlighted ? '#374151' : '#9ca3af'  // gray-700 highlighted, gray-400 normal
 
   // Drag state — must be declared before any early return
   const dragRef = useRef<{
@@ -232,7 +231,7 @@ function CLDEdge({
         style={{
           pointerEvents: 'none',
           stroke: strokeColor,
-          strokeWidth: isLoopHighlighted ? 3.5 : selected ? 2.5 : 1,
+          strokeWidth: isLoopHighlighted ? 3 : selected ? 2 : 0.75,
         }}
       />
       {/* Arrowhead at exact bezier–ellipse intersection */}
