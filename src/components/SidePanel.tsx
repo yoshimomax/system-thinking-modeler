@@ -2,14 +2,10 @@ import { useDiagramStore } from '../store/diagramStore'
 
 export default function SidePanel() {
   const {
-    loops,
-    nodes,
-    selectedNodeId,
-    selectedEdgeId,
-    updateNodeLabel,
-    deleteNode,
-    deleteEdge,
-    edges,
+    loops, nodes, edges,
+    selectedNodeId, selectedEdgeId, selectedLoopId,
+    updateNodeLabel, deleteNode, deleteEdge,
+    setSelectedLoop, updateLoopName,
   } = useDiagramStore()
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId)
@@ -86,21 +82,31 @@ export default function SidePanel() {
               const loopNodes = loop.nodeIds
                 .slice(0, -1)
                 .map((nid) => nodes.find((n) => n.id === nid)?.data.label ?? nid)
+              const isSelected = selectedLoopId === loop.id
               return (
                 <li
                   key={loop.id}
+                  onClick={() => setSelectedLoop(isSelected ? null : loop.id)}
                   className={[
-                    'rounded border px-2 py-1.5 text-xs',
+                    'rounded border px-2 py-1.5 text-xs cursor-pointer transition-shadow',
                     loop.type === 'R'
                       ? 'bg-orange-50 border-orange-300 text-orange-800'
                       : 'bg-blue-50 border-blue-300 text-blue-800',
+                    isSelected ? 'ring-2 ring-amber-400 shadow-sm' : 'hover:shadow-sm',
                   ].join(' ')}
                 >
-                  <span className="font-bold mr-1">
-                    {loop.type === 'R' ? 'R' : 'B'}
-                  </span>
-                  {loop.type === 'R' ? '強化ループ' : '均衡ループ'}
-                  <div className="mt-1 text-gray-600">
+                  <div className="flex items-center gap-1">
+                    <span className="font-bold shrink-0">{loop.type}</span>
+                    <input
+                      type="text"
+                      value={loop.name ?? ''}
+                      onChange={(e) => updateLoopName(loop.id, e.target.value)}
+                      onClick={(e) => e.stopPropagation()}
+                      placeholder={loop.type === 'R' ? '強化ループ' : '均衡ループ'}
+                      className="flex-1 bg-transparent border-b border-current/30 focus:outline-none focus:border-current text-xs min-w-0"
+                    />
+                  </div>
+                  <div className="mt-1 text-gray-600 opacity-80">
                     {loopNodes.join(' → ')} → …
                   </div>
                 </li>
