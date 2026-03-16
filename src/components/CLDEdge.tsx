@@ -232,7 +232,7 @@ function CLDEdge({
         style={{
           pointerEvents: 'none',
           stroke: strokeColor,
-          strokeWidth: isLoopHighlighted ? 3.5 : selected ? 2.5 : 1.5,
+          strokeWidth: isLoopHighlighted ? 3.5 : selected ? 2.5 : 2,
         }}
       />
       {/* Arrowhead at exact bezier–ellipse intersection */}
@@ -249,8 +249,8 @@ function CLDEdge({
             'nopan',
             'w-6 h-6 rounded-full border-2 text-xs font-bold flex items-center justify-center shadow-sm select-none',
             isPositive
-              ? 'bg-green-100 border-green-600 text-green-700'
-              : 'bg-red-100 border-red-600 text-red-700',
+              ? 'bg-green-200 border-green-700 text-green-800'
+              : 'bg-red-200 border-red-700 text-red-800',
             selected ? 'ring-2 ring-blue-400 ring-offset-1' : '',
           ].join(' ')}
           style={{

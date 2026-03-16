@@ -56,7 +56,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
           ? 'border-gray-700 ring-[3px] ring-gray-500 ring-offset-0 shadow-md'
           : selected
             ? 'border-blue-500 shadow-blue-200 shadow-md'
-            : 'border-gray-400 hover:border-gray-600',
+            : 'border-gray-500 hover:border-gray-700',
       ].join(' ')}
     >
       {/* Full-width transparent handle along top edge */}
