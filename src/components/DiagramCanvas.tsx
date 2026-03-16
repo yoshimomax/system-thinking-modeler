@@ -10,6 +10,7 @@ import {
   type NodeTypes,
   type EdgeTypes,
   type OnSelectionChangeParams,
+  type ConnectionLineComponentProps,
 } from '@xyflow/react'
 import { useDiagramStore } from '../store/diagramStore'
 import CLDNode from './CLDNode'
@@ -17,6 +18,21 @@ import CLDEdge from './CLDEdge'
 
 const nodeTypes: NodeTypes = { cld: CLDNode }
 const edgeTypes: EdgeTypes = { cld: CLDEdge }
+
+/** Connection line that snaps both endpoints to node centers */
+function CustomConnectionLine({ fromNode, toNode, toX, toY }: ConnectionLineComponentProps) {
+  const x1 = fromNode.positionAbsoluteX + (fromNode.measured?.width ?? 80) / 2
+  const y1 = fromNode.positionAbsoluteY + (fromNode.measured?.height ?? 36) / 2
+  const x2 = toNode
+    ? toNode.positionAbsoluteX + (toNode.measured?.width ?? 80) / 2
+    : toX
+  const y2 = toNode
+    ? toNode.positionAbsoluteY + (toNode.measured?.height ?? 36) / 2
+    : toY
+  return (
+    <line x1={x1} y1={y1} x2={x2} y2={y2} stroke="#94a3b8" strokeWidth={1.5} strokeDasharray="4 3" />
+  )
+}
 
 export default function DiagramCanvas() {
   const {
@@ -109,6 +125,7 @@ export default function DiagramCanvas() {
         onSelectionChange={onSelectionChange}
         connectionMode={ConnectionMode.Loose}
         connectionLineType={ConnectionLineType.Straight}
+        connectionLineComponent={CustomConnectionLine}
         connectionRadius={50}
         fitView
         deleteKeyCode={null}

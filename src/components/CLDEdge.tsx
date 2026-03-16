@@ -129,11 +129,11 @@ function CLDEdge({
   const tgtR = ellipseRadius(nx, ny, targetNode.measured.width, targetNode.measured.height)
   if (srcR + tgtR >= dist) return null
 
-  // Control point
+  // Control point stored as offset from midpoint — so it follows node movement
   const defaultCpX = (srcCx + tgtCx) / 2
   const defaultCpY = (srcCy + tgtCy) / 2
-  const cx = data?.controlPoint?.x ?? defaultCpX
-  const cy = data?.controlPoint?.y ?? defaultCpY
+  const cx = defaultCpX + (data?.controlPoint?.x ?? 0)
+  const cy = defaultCpY + (data?.controlPoint?.y ?? 0)
 
   // Bezier control point (passes through cx,cy at t=0.5)
   const qcpX = 2 * cx - 0.5 * (srcCx + tgtCx)
@@ -174,8 +174,8 @@ function CLDEdge({
     dragRef.current = {
       startX: e.clientX,
       startY: e.clientY,
-      cpX: cx,
-      cpY: cy,
+      cpX: data?.controlPoint?.x ?? 0,
+      cpY: data?.controlPoint?.y ?? 0,
       moved: false,
     }
   }
@@ -228,7 +228,7 @@ function CLDEdge({
         id={id}
         d={edgePath}
         stroke={strokeColor}
-        strokeWidth={selected || isLoopHighlighted ? 3 : 2}
+        strokeWidth={isLoopHighlighted ? 4 : selected ? 3 : 2}
         fill="none"
         className="react-flow__edge-path"
         style={{ pointerEvents: 'none' }}
