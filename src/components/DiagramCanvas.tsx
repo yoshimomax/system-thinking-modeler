@@ -88,8 +88,8 @@ export default function DiagramCanvas() {
       const dy = e.clientY - lastPaneClickPos.current.y
       const dist = Math.sqrt(dx * dx + dy * dy)
       if (now - lastPaneClickTime.current < 300 && dist < 10) {
-        const position = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-        addNode('変数', position)
+        const center = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+        addNode('変数', { x: center.x - 40, y: center.y - 18 })
         lastPaneClickTime.current = 0
       } else {
         lastPaneClickTime.current = now
