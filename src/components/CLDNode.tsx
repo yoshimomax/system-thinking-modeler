@@ -42,8 +42,10 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
 
   useEffect(() => {
     if (editing) {
-      inputRef.current?.focus()
-      inputRef.current?.select()
+      setTimeout(() => {
+        inputRef.current?.focus()
+        inputRef.current?.select()
+      }, 50)
     }
   }, [editing])
 
@@ -117,6 +119,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
                 setEditing(false)
               }
             }}
+            onMouseDown={(e) => e.stopPropagation()}
             className="text-sm font-medium text-gray-800 text-center bg-transparent outline-none absolute inset-0 w-full"
           />
         )}
