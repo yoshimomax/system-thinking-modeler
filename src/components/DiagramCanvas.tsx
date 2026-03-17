@@ -53,6 +53,8 @@ export default function DiagramCanvas() {
 
   const { fitView, screenToFlowPosition } = useReactFlow()
   const prevNodeCount = useRef(nodes.length)
+  const lastPaneClickTime = useRef(0)
+  const lastPaneClickPos = useRef({ x: 0, y: 0 })
 
   // On mobile: whenever a node is added, fit the view to show it
   useEffect(() => {
@@ -78,15 +80,23 @@ export default function DiagramCanvas() {
     [setSelectedNode, setSelectedEdge]
   )
 
-  const handleCanvasDoubleClick = useCallback(
+  const onPaneClick = useCallback(
     (e: React.MouseEvent) => {
-      // Only trigger on the pane background, not on nodes or edges
-      const target = e.target as HTMLElement
-      if (target.closest('.react-flow__node') || target.closest('.react-flow__edge')) return
-      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-      addNode('変数', position)
+      setSelectedLoop(null)
+      const now = Date.now()
+      const dx = e.clientX - lastPaneClickPos.current.x
+      const dy = e.clientY - lastPaneClickPos.current.y
+      const dist = Math.sqrt(dx * dx + dy * dy)
+      if (now - lastPaneClickTime.current < 300 && dist < 10) {
+        const position = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+        addNode('変数', position)
+        lastPaneClickTime.current = 0
+      } else {
+        lastPaneClickTime.current = now
+        lastPaneClickPos.current = { x: e.clientX, y: e.clientY }
+      }
     },
-    [addNode, screenToFlowPosition]
+    [setSelectedLoop, addNode, screenToFlowPosition]
   )
 
   const handleKeyDown = useCallback(
@@ -110,7 +120,7 @@ export default function DiagramCanvas() {
   )
 
   return (
-    <div className="flex-1 h-full w-full relative" onKeyDown={handleKeyDown} onDoubleClick={handleCanvasDoubleClick} tabIndex={0}>
+    <div className="flex-1 h-full w-full relative" onKeyDown={handleKeyDown} tabIndex={0}>
       {/* Custom SVG arrow markers */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
@@ -145,7 +155,7 @@ export default function DiagramCanvas() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onPaneClick={() => setSelectedLoop(null)}
+        onPaneClick={onPaneClick}
         onSelectionChange={onSelectionChange}
         connectionMode={ConnectionMode.Loose}
         connectionLineType={ConnectionLineType.Straight}
