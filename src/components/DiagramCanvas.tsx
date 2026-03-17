@@ -102,6 +102,8 @@ export default function DiagramCanvas() {
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
+        const tag = (e.target as HTMLElement).tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return
         if (selectedNodeId) deleteNode(selectedNodeId)
         else if (selectedEdgeId) deleteEdge(selectedEdgeId)
       }
