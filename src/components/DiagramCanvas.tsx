@@ -89,7 +89,7 @@ export default function DiagramCanvas() {
       const dist = Math.sqrt(dx * dx + dy * dy)
       if (now - lastPaneClickTime.current < 300 && dist < 10) {
         const center = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-        addNode('変数', { x: center.x - 40, y: center.y - 18 })
+        addNode(`変数${nodes.length + 1}`, { x: center.x - 40, y: center.y - 18 })
         lastPaneClickTime.current = 0
       } else {
         lastPaneClickTime.current = now
@@ -122,10 +122,10 @@ export default function DiagramCanvas() {
           x: rect.left + rect.width / 2,
           y: rect.top + rect.height / 2,
         })
-        addNode('変数', position)
+        addNode(`変数${nodes.length + 1}`, position)
       }
     },
-    [selectedNodeId, selectedEdgeId, deleteNode, deleteEdge, addNode, screenToFlowPosition]
+    [nodes.length, selectedNodeId, selectedEdgeId, deleteNode, deleteEdge, addNode, screenToFlowPosition]
   )
 
   return (
