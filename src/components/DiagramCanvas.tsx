@@ -153,6 +153,8 @@ export default function DiagramCanvas() {
         connectionRadius={50}
         fitView
         deleteKeyCode={null}
+        panOnDrag={[1, 2]}
+        selectionOnDrag
       >
         <Background gap={20} color="#e5e7eb" />
         <Controls />
