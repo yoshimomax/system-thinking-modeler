@@ -147,7 +147,7 @@ export default function DiagramCanvas() {
   )
 
   return (
-    <div className="flex-1 h-full w-full relative" onKeyDown={handleKeyDown} tabIndex={0}>
+    <div className="flex-1 h-full w-full relative outline-none" onKeyDown={handleKeyDown} tabIndex={0}>
       {/* Custom SVG arrow markers */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
