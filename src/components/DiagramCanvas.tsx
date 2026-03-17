@@ -11,7 +11,6 @@ import {
   type EdgeTypes,
   type OnSelectionChangeParams,
   type ConnectionLineComponentProps,
-  type ReactFlowProps,
 } from '@xyflow/react'
 import { useDiagramStore } from '../store/diagramStore'
 import CLDNode from './CLDNode'
@@ -79,8 +78,11 @@ export default function DiagramCanvas() {
     [setSelectedNode, setSelectedEdge]
   )
 
-  const onPaneDoubleClick = useCallback<NonNullable<ReactFlowProps['onPaneClick']>>(
-    (e) => {
+  const handleCanvasDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Only trigger on the pane background, not on nodes or edges
+      const target = e.target as HTMLElement
+      if (target.closest('.react-flow__node') || target.closest('.react-flow__edge')) return
       const position = screenToFlowPosition({ x: e.clientX, y: e.clientY })
       addNode('変数', position)
     },
@@ -108,7 +110,7 @@ export default function DiagramCanvas() {
   )
 
   return (
-    <div className="flex-1 h-full w-full relative" onKeyDown={handleKeyDown} tabIndex={0}>
+    <div className="flex-1 h-full w-full relative" onKeyDown={handleKeyDown} onDoubleClick={handleCanvasDoubleClick} tabIndex={0}>
       {/* Custom SVG arrow markers */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
@@ -144,7 +146,6 @@ export default function DiagramCanvas() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onPaneClick={() => setSelectedLoop(null)}
-        onPaneDoubleClick={onPaneDoubleClick}
         onSelectionChange={onSelectionChange}
         connectionMode={ConnectionMode.Loose}
         connectionLineType={ConnectionLineType.Straight}
