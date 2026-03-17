@@ -45,10 +45,11 @@ export default function DiagramCanvas() {
     setSelectedNode,
     setSelectedEdge,
     setSelectedLoop,
-    deleteNode,
-    deleteEdge,
+    deleteItems,
     selectedNodeId,
     selectedEdgeId,
+    undo,
+    redo,
   } = useDiagramStore()
 
   const { fitView, screenToFlowPosition } = useReactFlow()
@@ -101,21 +102,38 @@ export default function DiagramCanvas() {
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      const tag = (e.target as HTMLElement).tagName
+      const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable
+
+      // Undo: Ctrl+Z / Cmd+Z
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault()
+        undo()
+        return
+      }
+      // Redo: Ctrl+Y / Ctrl+Shift+Z / Cmd+Shift+Z
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+        e.preventDefault()
+        redo()
+        return
+      }
+
       if (e.key === 'Delete' || e.key === 'Backspace') {
-        const tag = (e.target as HTMLElement).tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return
-        const selectedNodes = nodes.filter((n) => n.selected)
-        const selectedEdges = edges.filter((ed) => ed.selected)
-        if (selectedNodes.length > 0 || selectedEdges.length > 0) {
-          selectedNodes.forEach((n) => deleteNode(n.id))
-          selectedEdges.forEach((ed) => deleteEdge(ed.id))
+        if (isEditing) return
+        // Use getState() to read current selection, avoiding stale closure
+        const { nodes: currentNodes, edges: currentEdges, selectedNodeId: snid, selectedEdgeId: seid } = useDiagramStore.getState()
+        const selNodes = currentNodes.filter((n) => n.selected)
+        const selEdges = currentEdges.filter((ed) => ed.selected)
+        if (selNodes.length > 0 || selEdges.length > 0) {
+          deleteItems(selNodes.map((n) => n.id), selEdges.map((ed) => ed.id))
         } else {
-          if (selectedNodeId) deleteNode(selectedNodeId)
-          else if (selectedEdgeId) deleteEdge(selectedEdgeId)
+          if (snid) deleteItems([snid], [])
+          else if (seid) deleteItems([], [seid])
         }
       }
+
       // N key: add a new node at the center of the viewport
-      if (e.key === 'n' || e.key === 'N') {
+      if ((e.key === 'n' || e.key === 'N') && !isEditing) {
         const el = e.currentTarget as HTMLElement
         const rect = el.getBoundingClientRect()
         const position = screenToFlowPosition({
@@ -125,7 +143,7 @@ export default function DiagramCanvas() {
         addNode(undefined, position)
       }
     },
-    [selectedNodeId, selectedEdgeId, deleteNode, deleteEdge, addNode, screenToFlowPosition]
+    [selectedNodeId, selectedEdgeId, deleteItems, undo, redo, addNode, screenToFlowPosition]
   )
 
   return (
