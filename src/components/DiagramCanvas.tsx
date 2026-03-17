@@ -104,8 +104,15 @@ export default function DiagramCanvas() {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         const tag = (e.target as HTMLElement).tagName
         if (tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable) return
-        if (selectedNodeId) deleteNode(selectedNodeId)
-        else if (selectedEdgeId) deleteEdge(selectedEdgeId)
+        const selectedNodes = nodes.filter((n) => n.selected)
+        const selectedEdges = edges.filter((ed) => ed.selected)
+        if (selectedNodes.length > 0 || selectedEdges.length > 0) {
+          selectedNodes.forEach((n) => deleteNode(n.id))
+          selectedEdges.forEach((ed) => deleteEdge(ed.id))
+        } else {
+          if (selectedNodeId) deleteNode(selectedNodeId)
+          else if (selectedEdgeId) deleteEdge(selectedEdgeId)
+        }
       }
       // N key: add a new node at the center of the viewport
       if (e.key === 'n' || e.key === 'N') {
