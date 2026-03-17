@@ -16,7 +16,7 @@ const edgeHandleBase: React.CSSProperties = {
 }
 
 function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
-  const { updateNodeLabel, setSelectedNode } = useDiagramStore()
+  const { updateNodeLabel, setSelectedNode, pendingEditNodeId, clearPendingEdit } = useDiagramStore()
 
   const isLoopHighlighted = useDiagramStore((state) => {
     if (!state.selectedLoopId) return false
@@ -31,6 +31,14 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   useEffect(() => {
     setDraft(data.label)
   }, [data.label])
+
+  // Auto-enter edit mode when this node was just created
+  useEffect(() => {
+    if (pendingEditNodeId === id) {
+      clearPendingEdit()
+      setEditing(true)
+    }
+  }, [pendingEditNodeId, id, clearPendingEdit])
 
   useEffect(() => {
     if (editing) {
@@ -80,27 +88,39 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
         style={{ ...edgeHandleBase, width: '14px', height: '100%', left: '-7px', top: 0 }}
       />
 
-      {editing ? (
-        <input
-          ref={inputRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onBlur={commitEdit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commitEdit()
-            if (e.key === 'Escape') {
-              setDraft(data.label)
-              setEditing(false)
-            }
-          }}
-          className="text-sm font-medium text-gray-800 text-center bg-transparent outline-none w-full"
-          style={{ minWidth: '60px', maxWidth: '160px' }}
-        />
-      ) : (
-        <span className={`text-sm whitespace-nowrap ${isLoopHighlighted ? 'font-bold text-gray-900' : 'font-medium text-gray-800'}`}>
-          {data.label}
+      {/*
+        Sizing layer: always rendered to hold the node's width.
+        The span mirrors `draft` so the node grows as the user types.
+        Hidden (invisible) while editing so only the input is visible.
+      */}
+      <div className="relative inline-flex items-center justify-center">
+        <span
+          className={[
+            'text-sm font-medium whitespace-nowrap',
+            isLoopHighlighted ? 'font-bold text-gray-900' : 'text-gray-800',
+            editing ? 'invisible' : '',
+          ].join(' ')}
+        >
+          {editing ? (draft || '\u00A0') : data.label}
         </span>
-      )}
+
+        {editing && (
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commitEdit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitEdit()
+              if (e.key === 'Escape') {
+                setDraft(data.label)
+                setEditing(false)
+              }
+            }}
+            className="text-sm font-medium text-gray-800 text-center bg-transparent outline-none absolute inset-0 w-full"
+          />
+        )}
+      </div>
     </div>
   )
 }

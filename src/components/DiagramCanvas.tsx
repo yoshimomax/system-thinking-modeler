@@ -41,6 +41,7 @@ export default function DiagramCanvas() {
     onNodesChange,
     onEdgesChange,
     onConnect,
+    addNode,
     setSelectedNode,
     setSelectedEdge,
     setSelectedLoop,
@@ -50,7 +51,7 @@ export default function DiagramCanvas() {
     selectedEdgeId,
   } = useDiagramStore()
 
-  const { fitView } = useReactFlow()
+  const { fitView, screenToFlowPosition } = useReactFlow()
   const prevNodeCount = useRef(nodes.length)
 
   // On mobile: whenever a node is added, fit the view to show it
@@ -77,18 +78,39 @@ export default function DiagramCanvas() {
     [setSelectedNode, setSelectedEdge]
   )
 
+  const handleCanvasDoubleClick = useCallback(
+    (e: React.MouseEvent) => {
+      // Only trigger on the pane background, not on nodes or edges
+      const target = e.target as HTMLElement
+      if (target.closest('.react-flow__node') || target.closest('.react-flow__edge')) return
+      const position = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      addNode('変数', position)
+    },
+    [addNode, screenToFlowPosition]
+  )
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
       if (e.key === 'Delete' || e.key === 'Backspace') {
         if (selectedNodeId) deleteNode(selectedNodeId)
         else if (selectedEdgeId) deleteEdge(selectedEdgeId)
       }
+      // N key: add a new node at the center of the viewport
+      if (e.key === 'n' || e.key === 'N') {
+        const el = e.currentTarget as HTMLElement
+        const rect = el.getBoundingClientRect()
+        const position = screenToFlowPosition({
+          x: rect.left + rect.width / 2,
+          y: rect.top + rect.height / 2,
+        })
+        addNode('変数', position)
+      }
     },
-    [selectedNodeId, selectedEdgeId, deleteNode, deleteEdge]
+    [selectedNodeId, selectedEdgeId, deleteNode, deleteEdge, addNode, screenToFlowPosition]
   )
 
   return (
-    <div className="flex-1 h-full w-full relative" onKeyDown={handleKeyDown} tabIndex={0}>
+    <div className="flex-1 h-full w-full relative" onKeyDown={handleKeyDown} onDoubleClick={handleCanvasDoubleClick} tabIndex={0}>
       {/* Custom SVG arrow markers */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
