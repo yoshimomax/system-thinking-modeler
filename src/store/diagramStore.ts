@@ -38,6 +38,7 @@ interface DiagramState {
   selectedNodeId: string | null
   selectedEdgeId: string | null
   selectedLoopId: string | null
+  pendingEditNodeId: string | null
 
   onNodesChange: (changes: NodeChange[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
@@ -54,6 +55,7 @@ interface DiagramState {
   setSelectedNode: (id: string | null) => void
   setSelectedEdge: (id: string | null) => void
   setSelectedLoop: (id: string | null) => void
+  clearPendingEdit: () => void
   updateLoopName: (id: string, name: string) => void
 
   detectLoops: () => void
@@ -147,6 +149,7 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   selectedNodeId: null,
   selectedEdgeId: null,
   selectedLoopId: null,
+  pendingEditNodeId: null,
 
   onNodesChange: (changes) => {
     set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as CLDNode[] }))
@@ -181,7 +184,7 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
       position,
       data: { label },
     }
-    set((state) => ({ nodes: [...state.nodes, newNode] }))
+    set((state) => ({ nodes: [...state.nodes, newNode], pendingEditNodeId: id }))
     return id
   },
 
@@ -243,6 +246,7 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   setSelectedNode: (id) => set({ selectedNodeId: id, selectedEdgeId: null }),
   setSelectedEdge: (id) => set({ selectedEdgeId: id, selectedNodeId: null }),
   setSelectedLoop: (id) => set({ selectedLoopId: id }),
+  clearPendingEdit: () => set({ pendingEditNodeId: null }),
 
   updateLoopName: (id, name) => {
     set((state) => ({
