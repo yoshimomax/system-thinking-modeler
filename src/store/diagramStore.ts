@@ -31,6 +31,10 @@ export interface LoopInfo {
   name?: string
 }
 
+type Snapshot = { nodes: CLDNode[]; edges: CLDEdge[] }
+
+const MAX_HISTORY = 50
+
 interface DiagramState {
   nodes: CLDNode[]
   edges: CLDEdge[]
@@ -39,6 +43,8 @@ interface DiagramState {
   selectedEdgeId: string | null
   selectedLoopId: string | null
   pendingEditNodeId: string | null
+  past: Snapshot[]
+  future: Snapshot[]
 
   onNodesChange: (changes: NodeChange[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
@@ -47,6 +53,7 @@ interface DiagramState {
   addNode: (label?: string, position?: { x: number; y: number }) => string
   updateNodeLabel: (id: string, label: string) => void
   deleteNode: (id: string) => void
+  deleteItems: (nodeIds: string[], edgeIds: string[]) => void
 
   toggleEdgePolarity: (id: string) => void
   updateEdgeControlPoint: (id: string, cp: { x: number; y: number } | null) => void
@@ -57,6 +64,9 @@ interface DiagramState {
   setSelectedLoop: (id: string | null) => void
   clearPendingEdit: () => void
   updateLoopName: (id: string, name: string) => void
+
+  undo: () => void
+  redo: () => void
 
   detectLoops: () => void
   loadDiagram: (nodes: CLDNode[], edges: CLDEdge[]) => void
@@ -150,6 +160,8 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   selectedEdgeId: null,
   selectedLoopId: null,
   pendingEditNodeId: null,
+  past: [],
+  future: [],
 
   onNodesChange: (changes) => {
     set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as CLDNode[] }))
@@ -172,7 +184,8 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
       const rawLoops = detectFeedbackLoops(state.nodes, edges)
       const loops = mergeLoopNames(rawLoops, state.loops)
       const selectedLoopId = preserveSelection(state.selectedLoopId, state.loops, loops)
-      return { edges, loops, selectedLoopId }
+      const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
+      return { edges, loops, selectedLoopId, past, future: [] }
     })
   },
 
@@ -185,31 +198,58 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
       position,
       data: { label: autoLabel },
     }
-    set((state) => ({ nodes: [...state.nodes, newNode], pendingEditNodeId: id }))
+    set((state) => {
+      const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
+      return { nodes: [...state.nodes, newNode], pendingEditNodeId: id, past, future: [] }
+    })
     return id
   },
 
   updateNodeLabel: (id, label) => {
-    set((state) => ({
-      nodes: state.nodes.map((n) =>
-        n.id === id ? { ...n, data: { ...n.data, label } } : n
-      ),
-    }))
+    set((state) => {
+      const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
+      return {
+        nodes: state.nodes.map((n) =>
+          n.id === id ? { ...n, data: { ...n.data, label } } : n
+        ),
+        past,
+        future: [],
+      }
+    })
   },
 
   deleteNode: (id) => {
     set((state) => {
+      const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
       const nodes = state.nodes.filter((n) => n.id !== id)
       const edges = state.edges.filter((e) => e.source !== id && e.target !== id)
       const rawLoops = detectFeedbackLoops(nodes, edges)
       const loops = mergeLoopNames(rawLoops, state.loops)
       const selectedLoopId = preserveSelection(state.selectedLoopId, state.loops, loops)
-      return { nodes, edges, loops, selectedLoopId, selectedNodeId: null }
+      return { nodes, edges, loops, selectedLoopId, selectedNodeId: null, past, future: [] }
+    })
+  },
+
+  /** Batch-delete nodes and edges in a single transaction (one history entry). */
+  deleteItems: (nodeIds, edgeIds) => {
+    set((state) => {
+      const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
+      const nodeIdSet = new Set(nodeIds)
+      const edgeIdSet = new Set(edgeIds)
+      const nodes = state.nodes.filter((n) => !nodeIdSet.has(n.id))
+      const edges = state.edges.filter(
+        (e) => !edgeIdSet.has(e.id) && !nodeIdSet.has(e.source) && !nodeIdSet.has(e.target)
+      )
+      const rawLoops = detectFeedbackLoops(nodes, edges)
+      const loops = mergeLoopNames(rawLoops, state.loops)
+      const selectedLoopId = preserveSelection(state.selectedLoopId, state.loops, loops)
+      return { nodes, edges, loops, selectedLoopId, selectedNodeId: null, selectedEdgeId: null, past, future: [] }
     })
   },
 
   toggleEdgePolarity: (id) => {
     set((state) => {
+      const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
       const edges = state.edges.map((e) =>
         e.id === id
           ? { ...e, data: { ...e.data, polarity: (e.data?.polarity === '+' ? '-' : '+') as Polarity } }
@@ -218,10 +258,11 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
       const rawLoops = detectFeedbackLoops(state.nodes, edges)
       const loops = mergeLoopNames(rawLoops, state.loops)
       const selectedLoopId = preserveSelection(state.selectedLoopId, state.loops, loops)
-      return { edges, loops, selectedLoopId }
+      return { edges, loops, selectedLoopId, past, future: [] }
     })
   },
 
+  // Not tracked in history (called on every pointer-move during drag)
   updateEdgeControlPoint: (id, cp) => {
     set((state) => ({
       edges: state.edges.map((e) => {
@@ -236,11 +277,12 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
 
   deleteEdge: (id) => {
     set((state) => {
+      const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
       const edges = state.edges.filter((e) => e.id !== id)
       const rawLoops = detectFeedbackLoops(state.nodes, edges)
       const loops = mergeLoopNames(rawLoops, state.loops)
       const selectedLoopId = preserveSelection(state.selectedLoopId, state.loops, loops)
-      return { edges, loops, selectedLoopId, selectedEdgeId: null }
+      return { edges, loops, selectedLoopId, selectedEdgeId: null, past, future: [] }
     })
   },
 
@@ -255,6 +297,44 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
     }))
   },
 
+  undo: () => {
+    const state = get()
+    if (state.past.length === 0) return
+    const prev = state.past[state.past.length - 1]
+    const newPast = state.past.slice(0, -1)
+    const newFuture = [{ nodes: state.nodes, edges: state.edges }, ...state.future.slice(0, MAX_HISTORY - 1)]
+    const rawLoops = detectFeedbackLoops(prev.nodes, prev.edges)
+    const loops = mergeLoopNames(rawLoops, state.loops)
+    set({
+      nodes: prev.nodes,
+      edges: prev.edges,
+      loops,
+      past: newPast,
+      future: newFuture,
+      selectedNodeId: null,
+      selectedEdgeId: null,
+    })
+  },
+
+  redo: () => {
+    const state = get()
+    if (state.future.length === 0) return
+    const next = state.future[0]
+    const newFuture = state.future.slice(1)
+    const newPast = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
+    const rawLoops = detectFeedbackLoops(next.nodes, next.edges)
+    const loops = mergeLoopNames(rawLoops, state.loops)
+    set({
+      nodes: next.nodes,
+      edges: next.edges,
+      loops,
+      past: newPast,
+      future: newFuture,
+      selectedNodeId: null,
+      selectedEdgeId: null,
+    })
+  },
+
   detectLoops: () => {
     const { nodes, edges } = get()
     const loops = detectFeedbackLoops(nodes, edges)
@@ -262,12 +342,19 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   },
 
   loadDiagram: (nodes, edges) => {
+    const state = get()
+    const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
     const loops = detectFeedbackLoops(nodes, edges)
-    set({ nodes, edges, loops, selectedNodeId: null, selectedEdgeId: null, selectedLoopId: null })
+    set({ nodes, edges, loops, selectedNodeId: null, selectedEdgeId: null, selectedLoopId: null, past, future: [] })
   },
 
-  clearDiagram: () => set({
-    nodes: [], edges: [], loops: [],
-    selectedNodeId: null, selectedEdgeId: null, selectedLoopId: null,
-  }),
+  clearDiagram: () => {
+    const state = get()
+    const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
+    set({
+      nodes: [], edges: [], loops: [],
+      selectedNodeId: null, selectedEdgeId: null, selectedLoopId: null,
+      past, future: [],
+    })
+  },
 }))
