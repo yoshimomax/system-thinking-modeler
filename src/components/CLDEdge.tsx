@@ -4,7 +4,7 @@ import { useDiagramStore, type CLDEdge as CLDEdgeType } from '../store/diagramSt
 
 const DRAG_THRESHOLD = 4
 
-/** Ellipse boundary distance from center along direction (nx, ny) */
+/** Ellipse boundary distance from center along direction (nx, ny) — used for overlap guard */
 function ellipseRadius(nx: number, ny: number, w: number, h: number): number {
   const a = Math.max(1, w / 2)
   const b = Math.max(1, h / 2)
@@ -39,27 +39,43 @@ function bezierTangent(
 }
 
 /**
- * Binary search for t where the bezier first enters the target ellipse.
- * Assumes t=0 is outside and t=1 (target center) is inside.
+ * Test whether (px, py) is inside the rounded-rectangle (stadium) centered at (cx, cy).
+ * CLDNode uses `rounded-full` so border-radius = h/2, giving a true pill/stadium shape.
  */
-function findEllipseEntryT(
+function insideStadium(
+  px: number, py: number,
+  cx: number, cy: number,
+  w: number, h: number,
+): boolean {
+  const r = h / 2                    // rounded-full: radius = height / 2
+  const halfW = w / 2
+  const dx = Math.abs(px - cx)
+  const dy = Math.abs(py - cy)
+  if (dx > halfW || dy > r) return false
+  const innerHalfW = halfW - r       // half-width of the flat rectangular region
+  if (dx <= innerHalfW) return true  // inside rectangular middle
+  return (dx - innerHalfW) ** 2 + dy ** 2 <= r * r  // inside a semicircular cap
+}
+
+/**
+ * Binary search for t where the bezier first enters the target stadium (rounded-rectangle).
+ * Assumes t=0 (source center) is outside and t=1 (target center) is inside.
+ */
+function findStadiumEntryT(
   p0x: number, p0y: number,
   p1x: number, p1y: number,
   p2x: number, p2y: number,
   cx: number, cy: number,
-  a: number, b: number,  // must be > 0
+  w: number, h: number,
 ): number {
-  // Verify t=0 is outside and t=1 is inside; if not, return a safe fallback
   const p0 = bezierPoint(0, p0x, p0y, p1x, p1y, p2x, p2y)
-  const insideAtZero = ((p0.x - cx) / a) ** 2 + ((p0.y - cy) / b) ** 2 < 1
-  if (insideAtZero) return 0 // degenerate: source center is inside target
+  if (insideStadium(p0.x, p0.y, cx, cy, w, h)) return 0  // degenerate
 
   let tLo = 0, tHi = 1
   for (let i = 0; i < 24; i++) {
     const tMid = (tLo + tHi) / 2
     const p = bezierPoint(tMid, p0x, p0y, p1x, p1y, p2x, p2y)
-    const inside = ((p.x - cx) / a) ** 2 + ((p.y - cy) / b) ** 2 < 1
-    if (inside) tHi = tMid
+    if (insideStadium(p.x, p.y, cx, cy, w, h)) tHi = tMid
     else tLo = tMid
   }
   return (tLo + tHi) / 2
@@ -123,7 +139,7 @@ function CLDEdge({
   const nx = dx / dist
   const ny = dy / dist
 
-  // Overlap check
+  // Overlap check (ellipse approximation is fine here as a guard)
   const srcR = ellipseRadius(nx, ny, sourceNode.measured.width, sourceNode.measured.height)
   const tgtR = ellipseRadius(nx, ny, targetNode.measured.width, targetNode.measured.height)
   if (srcR + tgtR >= dist) return null
@@ -141,10 +157,12 @@ function CLDEdge({
   // Path: source center → target center
   const edgePath = `M ${srcCx} ${srcCy} Q ${qcpX} ${qcpY} ${tgtCx} ${tgtCy}`
 
-  // Arrowhead: exact bezier–ellipse intersection
-  const tgtA = Math.max(1, targetNode.measured.width / 2)
-  const tgtB = Math.max(1, targetNode.measured.height / 2)
-  const arrowT = findEllipseEntryT(srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy, tgtCx, tgtCy, tgtA, tgtB)
+  // Arrowhead: exact bezier–stadium (rounded-rectangle) intersection
+  const arrowT = findStadiumEntryT(
+    srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy,
+    tgtCx, tgtCy,
+    targetNode.measured.width, targetNode.measured.height,
+  )
   const arrowPos = bezierPoint(arrowT, srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy)
   const arrowDir = bezierTangent(arrowT, srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy)
 
@@ -234,7 +252,7 @@ function CLDEdge({
           strokeWidth: isLoopHighlighted ? 3 : selected ? 2 : 0.75,
         }}
       />
-      {/* Arrowhead at exact bezier–ellipse intersection */}
+      {/* Arrowhead at exact bezier–stadium intersection */}
       <polygon
         points={arrowPoints}
         fill={strokeColor}
