@@ -10,9 +10,9 @@ const SWIPE_CLOSE_THRESHOLD = 80
 
 export default function BottomSheet({ isOpen, onClose }: Props) {
   const {
-    loops, nodes,
-    selectedNodeId, selectedLoopId,
-    updateNodeLabel, deleteNode,
+    loops, nodes, edges,
+    selectedNodeId, selectedEdgeId, selectedLoopId,
+    updateNodeLabel, deleteNode, deleteEdge,
     setSelectedLoop, updateLoopName,
   } = useDiagramStore()
 
@@ -38,6 +38,7 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
   }
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId)
+  const selectedEdge = edges.find((e) => e.id === selectedEdgeId)
 
   return (
     <>
@@ -91,6 +92,38 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
                   className="text-sm text-red-500 font-medium text-left py-1"
                 >
                   このノードを削除
+                </button>
+              </div>
+            </section>
+          )}
+
+          {/* Selected edge */}
+          {selectedEdge && (
+            <section>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                選択中のコネクタ
+              </h3>
+              <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 flex flex-col gap-3">
+                <div className="flex items-center gap-2 text-sm text-gray-600">
+                  <span className={[
+                    'w-6 h-6 rounded-full border-2 text-xs font-bold flex items-center justify-center',
+                    selectedEdge.data?.polarity === '+'
+                      ? 'bg-green-200 border-green-700 text-green-800'
+                      : 'bg-red-200 border-red-700 text-red-800',
+                  ].join(' ')}>
+                    {selectedEdge.data?.polarity ?? '+'}
+                  </span>
+                  <span className="flex-1 text-xs text-gray-500">
+                    {nodes.find((n) => n.id === selectedEdge.source)?.data.label ?? selectedEdge.source}
+                    {'  →  '}
+                    {nodes.find((n) => n.id === selectedEdge.target)?.data.label ?? selectedEdge.target}
+                  </span>
+                </div>
+                <button
+                  onClick={() => { deleteEdge(selectedEdge.id); onClose() }}
+                  className="text-sm text-red-500 font-medium text-left py-1"
+                >
+                  このコネクタを削除
                 </button>
               </div>
             </section>
