@@ -55,8 +55,6 @@ export default function DiagramCanvas() {
 
   const { fitView, screenToFlowPosition } = useReactFlow()
   const prevNodeCount = useRef(nodes.length)
-  const lastPaneClickTime = useRef(0)
-  const lastPaneClickPos = useRef({ x: 0, y: 0 })
   const didInitialFit = useRef(false)
 
   // Initial fitView — runs once after nodes are first laid out
@@ -91,22 +89,16 @@ export default function DiagramCanvas() {
   )
 
   const onPaneClick = useCallback(
+    () => { setSelectedLoop(null) },
+    [setSelectedLoop]
+  )
+
+  const onPaneDoubleClick = useCallback(
     (e: React.MouseEvent) => {
-      setSelectedLoop(null)
-      const now = Date.now()
-      const dx = e.clientX - lastPaneClickPos.current.x
-      const dy = e.clientY - lastPaneClickPos.current.y
-      const dist = Math.sqrt(dx * dx + dy * dy)
-      if (now - lastPaneClickTime.current < 300 && dist < 10) {
-        const center = screenToFlowPosition({ x: e.clientX, y: e.clientY })
-        addNode(undefined, { x: center.x - 40, y: center.y - 18 })
-        lastPaneClickTime.current = 0
-      } else {
-        lastPaneClickTime.current = now
-        lastPaneClickPos.current = { x: e.clientX, y: e.clientY }
-      }
+      const center = screenToFlowPosition({ x: e.clientX, y: e.clientY })
+      addNode(undefined, { x: center.x - 40, y: center.y - 18 })
     },
-    [setSelectedLoop, addNode, screenToFlowPosition]
+    [addNode, screenToFlowPosition]
   )
 
   const handleKeyDown = useCallback(
@@ -192,12 +184,16 @@ export default function DiagramCanvas() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onPaneClick={onPaneClick}
+        onPaneDoubleClick={onPaneDoubleClick}
         onSelectionChange={onSelectionChange}
         connectionMode={ConnectionMode.Loose}
         connectionLineType={ConnectionLineType.Straight}
         connectionLineComponent={CustomConnectionLine}
         connectionRadius={50}
         deleteKeyCode={null}
+        zoomOnDoubleClick={false}
+        zoomOnPinch={isMobile}
+        panOnScroll={false}
         panOnDrag={isMobile ? false : [1, 2]}
         selectionOnDrag
       >
