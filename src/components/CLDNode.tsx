@@ -100,6 +100,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     }}
       onTouchEnd={handleTouchEnd}
       onClick={() => setSelectedNode(id)}
+      onPointerDown={editing ? (e) => e.stopPropagation() : undefined}
       className={[
         'px-4 py-2 rounded-full border-2 bg-white shadow-sm cursor-pointer select-none min-w-[80px] text-center',
         isLoopHighlighted
