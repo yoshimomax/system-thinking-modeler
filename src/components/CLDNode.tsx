@@ -161,6 +161,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
               }
             }}
             onMouseDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             onTouchEnd={(e) => e.stopPropagation()}
             className="text-sm font-medium text-gray-800 text-center bg-transparent outline-none absolute inset-0 w-full"
           />
