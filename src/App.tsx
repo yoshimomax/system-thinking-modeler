@@ -20,6 +20,7 @@ function useIsMobile() {
 function AppContent() {
   const isMobile = useIsMobile()
   const [panelOpen, setPanelOpen] = useState(false)
+  const [sidePanelOpen, setSidePanelOpen] = useState(true)
   const selectedEdgeId = useDiagramStore((s) => s.selectedEdgeId)
 
   // Auto-open bottom sheet when an edge is selected on mobile
@@ -47,7 +48,7 @@ function AppContent() {
       <Toolbar />
       <div className="flex flex-1 overflow-hidden">
         <DiagramCanvas />
-        <SidePanel />
+        <SidePanel isOpen={sidePanelOpen} onToggle={() => setSidePanelOpen((v) => !v)} />
       </div>
     </div>
   )

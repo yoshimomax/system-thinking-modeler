@@ -57,6 +57,14 @@ export default function DiagramCanvas() {
   const prevNodeCount = useRef(nodes.length)
   const lastPaneClickTime = useRef(0)
   const lastPaneClickPos = useRef({ x: 0, y: 0 })
+  const didInitialFit = useRef(false)
+
+  // Initial fitView — runs once after nodes are first laid out
+  useEffect(() => {
+    if (didInitialFit.current) return
+    didInitialFit.current = true
+    setTimeout(() => fitView({ padding: 0.4 }), 80)
+  }, [fitView])
 
   // On mobile: whenever a node is added, fit the view to show it
   useEffect(() => {
@@ -189,7 +197,6 @@ export default function DiagramCanvas() {
         connectionLineType={ConnectionLineType.Straight}
         connectionLineComponent={CustomConnectionLine}
         connectionRadius={50}
-        fitView
         deleteKeyCode={null}
         panOnDrag={isMobile ? false : [1, 2]}
         selectionOnDrag
