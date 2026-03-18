@@ -18,13 +18,21 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
 
   const [legendOpen, setLegendOpen] = useState(false)
   const touchStartY = useRef<number | null>(null)
+  const [dragOffset, setDragOffset] = useState(0)
 
   const handleTouchStart = (e: React.TouchEvent) => {
     touchStartY.current = e.touches[0].clientY
+    setDragOffset(0)
+  }
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return
+    const dy = e.touches[0].clientY - touchStartY.current
+    if (dy > 0) setDragOffset(dy)
   }
   const handleTouchEnd = (e: React.TouchEvent) => {
     if (touchStartY.current === null) return
     const dy = e.changedTouches[0].clientY - touchStartY.current
+    setDragOffset(0)
     if (dy > SWIPE_CLOSE_THRESHOLD) onClose()
     touchStartY.current = null
   }
@@ -45,18 +53,20 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
       <div
         className={[
           'fixed left-0 right-0 z-40 bg-white rounded-t-2xl shadow-2xl',
-          'transition-transform duration-300 ease-out',
           'max-h-[65vh] flex flex-col',
-          isOpen ? 'translate-y-0 pointer-events-auto' : 'translate-y-full pointer-events-none',
+          dragOffset === 0 ? 'transition-transform duration-300 ease-out' : '',
+          isOpen ? 'pointer-events-auto' : 'translate-y-full pointer-events-none',
         ].join(' ')}
-        style={{ bottom: 'calc(56px + env(safe-area-inset-bottom))' }}
+        style={{
+          bottom: 'calc(56px + env(safe-area-inset-bottom))',
+          transform: isOpen ? `translateY(${dragOffset}px)` : undefined,
+        }}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
       >
-        {/* Drag handle — swipe down here to close */}
-        <div
-          className="flex items-center justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing"
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
-        >
+        {/* Drag handle */}
+        <div className="flex items-center justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing">
           <div className="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
 
