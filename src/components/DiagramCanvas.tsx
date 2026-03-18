@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef } from 'react'
+import { type MobileMode } from '../App'
 import {
   ReactFlow,
   Background,
@@ -34,7 +35,7 @@ function CustomConnectionLine({ fromNode, toNode, toX, toY }: ConnectionLineComp
   )
 }
 
-export default function DiagramCanvas() {
+export default function DiagramCanvas({ mobileMode }: { mobileMode?: MobileMode }) {
   const {
     nodes,
     edges,
@@ -190,8 +191,8 @@ export default function DiagramCanvas() {
         connectionRadius={50}
         fitView
         deleteKeyCode={null}
-        panOnDrag={[1, 2]}
-        selectionOnDrag
+        panOnDrag={mobileMode === 'select' ? [1, 2] : mobileMode === 'pan' ? true : [1, 2]}
+        selectionOnDrag={mobileMode !== 'pan'}
       >
         <Background gap={20} color="#e5e7eb" />
         <Controls />

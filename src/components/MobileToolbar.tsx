@@ -1,13 +1,16 @@
 import { useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useDiagramStore, type CLDNode, type CLDEdge } from '../store/diagramStore'
+import { type MobileMode } from '../App'
 
 interface Props {
   onShowPanel: () => void
   panelOpen: boolean
+  mobileMode: MobileMode
+  onToggleMode: () => void
 }
 
-export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
+export default function MobileToolbar({ onShowPanel, panelOpen, mobileMode, onToggleMode }: Props) {
   const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
   const { fitView } = useReactFlow()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -67,6 +70,28 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
             <path strokeLinecap="round" strokeWidth="2" d="M12 8v8M8 12h8" />
           </svg>
           <span className="text-[10px] mt-0.5 font-medium">追加</span>
+        </button>
+
+        {/* Pan / Select mode toggle */}
+        <button
+          onClick={onToggleMode}
+          className={`flex flex-col items-center py-2 px-3 active:opacity-60 ${mobileMode === 'select' ? 'text-blue-600' : 'text-gray-600'}`}
+          style={{ touchAction: 'manipulation' }}
+        >
+          {mobileMode === 'pan' ? (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Hand / pan icon */}
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 013 0m-3 6a1.5 1.5 0 003 0m0 0V9.5m0 2a1.5 1.5 0 003 0m0 0V11m0 0a1.5 1.5 0 013 0v3a6 6 0 01-6 6h-2a7 7 0 01-7-7V14" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              {/* Selection rectangle icon */}
+              <rect x="4" y="4" width="7" height="7" strokeWidth="2" strokeDasharray="2 1" rx="1" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 4h3a2 2 0 012 2v3M15 20h3a2 2 0 002-2v-3M4 15v3a2 2 0 002 2h3" />
+            </svg>
+          )}
+          <span className="text-[10px] mt-0.5 font-medium">{mobileMode === 'pan' ? 'パン' : '選択'}</span>
         </button>
 
         {/* Fit View */}

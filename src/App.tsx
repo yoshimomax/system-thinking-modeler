@@ -5,6 +5,9 @@ import DiagramCanvas from './components/DiagramCanvas'
 import SidePanel from './components/SidePanel'
 import MobileToolbar from './components/MobileToolbar'
 import BottomSheet from './components/BottomSheet'
+import { useDiagramStore } from './store/diagramStore'
+
+export type MobileMode = 'pan' | 'select'
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
@@ -19,6 +22,13 @@ function useIsMobile() {
 function AppContent() {
   const isMobile = useIsMobile()
   const [panelOpen, setPanelOpen] = useState(false)
+  const [mobileMode, setMobileMode] = useState<MobileMode>('pan')
+  const selectedEdgeId = useDiagramStore((s) => s.selectedEdgeId)
+
+  // Auto-open bottom sheet when an edge is selected on mobile
+  useEffect(() => {
+    if (isMobile && selectedEdgeId) setPanelOpen(true)
+  }, [isMobile, selectedEdgeId])
 
   if (isMobile) {
     return (
@@ -27,10 +37,15 @@ function AppContent() {
           <span className="font-bold text-gray-800 text-sm">CLD エディタ</span>
         </header>
         <div className="flex-1 overflow-hidden">
-          <DiagramCanvas />
+          <DiagramCanvas mobileMode={mobileMode} />
         </div>
         <BottomSheet isOpen={panelOpen} onClose={() => setPanelOpen(false)} />
-        <MobileToolbar onShowPanel={() => setPanelOpen((p) => !p)} panelOpen={panelOpen} />
+        <MobileToolbar
+          onShowPanel={() => setPanelOpen((p) => !p)}
+          panelOpen={panelOpen}
+          mobileMode={mobileMode}
+          onToggleMode={() => setMobileMode((m) => m === 'pan' ? 'select' : 'pan')}
+        />
       </div>
     )
   }
