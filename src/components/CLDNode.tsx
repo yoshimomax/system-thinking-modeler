@@ -81,6 +81,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   return (
     <div
       onDoubleClick={(e) => {
+      e.stopPropagation()
       // Capture caret position from the span's text node while it is still visible
       let caretPos: number | null = null
       if (document.caretRangeFromPoint) {
