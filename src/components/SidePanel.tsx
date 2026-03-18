@@ -1,7 +1,12 @@
 import { useState } from 'react'
 import { useDiagramStore } from '../store/diagramStore'
 
-export default function SidePanel() {
+interface Props {
+  isOpen: boolean
+  onToggle: () => void
+}
+
+export default function SidePanel({ isOpen, onToggle }: Props) {
   const [legendOpen, setLegendOpen] = useState(false)
   const {
     loops, nodes, edges,
@@ -13,8 +18,37 @@ export default function SidePanel() {
   const selectedNode = nodes.find((n) => n.id === selectedNodeId)
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId)
 
+  if (!isOpen) {
+    return (
+      <aside className="flex flex-col border-l border-gray-200 bg-gray-50 shrink-0 w-7">
+        <button
+          onClick={onToggle}
+          title="パネルを開く"
+          className="flex-1 flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+      </aside>
+    )
+  }
+
   return (
     <aside className="w-60 flex flex-col gap-4 border-l border-gray-200 bg-gray-50 overflow-y-auto p-3 shrink-0">
+
+      {/* Collapse button */}
+      <div className="flex justify-end -mb-2">
+        <button
+          onClick={onToggle}
+          title="パネルを閉じる"
+          className="text-gray-400 hover:text-gray-700 p-0.5 rounded hover:bg-gray-200 transition-colors"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
 
       {/* Selected element properties */}
       {selectedNode && (
