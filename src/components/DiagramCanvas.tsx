@@ -93,8 +93,9 @@ export default function DiagramCanvas() {
     [setSelectedLoop]
   )
 
-  const onPaneDoubleClick = useCallback(
+  const onCanvasDoubleClick = useCallback(
     (e: React.MouseEvent) => {
+      if (!(e.target as Element).closest('.react-flow__pane')) return
       const center = screenToFlowPosition({ x: e.clientX, y: e.clientY })
       addNode(undefined, { x: center.x - 40, y: center.y - 18 })
     },
@@ -148,7 +149,7 @@ export default function DiagramCanvas() {
   )
 
   return (
-    <div className="flex-1 h-full w-full relative outline-none" onKeyDown={handleKeyDown} tabIndex={0}>
+    <div className="flex-1 h-full w-full relative outline-none" onKeyDown={handleKeyDown} onDoubleClick={onCanvasDoubleClick} tabIndex={0}>
       {/* Custom SVG arrow markers */}
       <svg style={{ position: 'absolute', width: 0, height: 0 }}>
         <defs>
@@ -184,7 +185,6 @@ export default function DiagramCanvas() {
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onPaneClick={onPaneClick}
-        onPaneDoubleClick={onPaneDoubleClick}
         onSelectionChange={onSelectionChange}
         connectionMode={ConnectionMode.Loose}
         connectionLineType={ConnectionLineType.Straight}
