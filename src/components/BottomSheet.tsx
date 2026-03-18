@@ -1,9 +1,12 @@
+import { useRef, useState } from 'react'
 import { useDiagramStore } from '../store/diagramStore'
 
 interface Props {
   isOpen: boolean
   onClose: () => void
 }
+
+const SWIPE_CLOSE_THRESHOLD = 80
 
 export default function BottomSheet({ isOpen, onClose }: Props) {
   const {
@@ -12,6 +15,19 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
     updateNodeLabel, deleteNode, deleteEdge,
     setSelectedLoop, updateLoopName,
   } = useDiagramStore()
+
+  const [legendOpen, setLegendOpen] = useState(false)
+  const touchStartY = useRef<number | null>(null)
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartY.current = e.touches[0].clientY
+  }
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartY.current === null) return
+    const dy = e.changedTouches[0].clientY - touchStartY.current
+    if (dy > SWIPE_CLOSE_THRESHOLD) onClose()
+    touchStartY.current = null
+  }
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId)
   const selectedEdge = edges.find((e) => e.id === selectedEdgeId)
@@ -36,8 +52,12 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
         ].join(' ')}
         style={{ bottom: 'calc(56px + env(safe-area-inset-bottom))' }}
       >
-        {/* Drag handle */}
-        <div className="flex items-center justify-center pt-3 pb-1 shrink-0">
+        {/* Drag handle — swipe down here to close */}
+        <div
+          className="flex items-center justify-center pt-3 pb-1 shrink-0 cursor-grab active:cursor-grabbing"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <div className="w-10 h-1 bg-gray-300 rounded-full" />
         </div>
 
@@ -62,30 +82,6 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
                   className="text-sm text-red-500 font-medium text-left py-1"
                 >
                   このノードを削除
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* Selected edge */}
-          {selectedEdge && (
-            <section>
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
-                選択中のエッジ
-              </h3>
-              <div className="bg-gray-50 rounded-xl border border-gray-200 p-3 flex flex-col gap-2">
-                <p className="text-base text-gray-700">
-                  極性:{' '}
-                  <span className={selectedEdge.data?.polarity === '+' ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
-                    {selectedEdge.data?.polarity === '+' ? '＋（強化）' : '−（抑制）'}
-                  </span>
-                </p>
-                <p className="text-xs text-gray-400">エッジの極性ラベルをタップして切り替えられます</p>
-                <button
-                  onClick={() => { deleteEdge(selectedEdge.id); onClose() }}
-                  className="text-sm text-red-500 font-medium text-left py-1"
-                >
-                  このエッジを削除
                 </button>
               </div>
             </section>
@@ -136,15 +132,23 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
             )}
           </section>
 
-          {/* Legend */}
+          {/* Legend — collapsible */}
           <section>
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">凡例</h3>
-            <ul className="text-sm text-gray-600 space-y-1.5">
-              <li><span className="text-green-600 font-bold">＋</span> 同方向（強化）</li>
-              <li><span className="text-red-600 font-bold">−</span> 逆方向（抑制）</li>
-              <li><span className="text-orange-600 font-bold">R</span> 強化ループ</li>
-              <li><span className="text-blue-600 font-bold">B</span> 均衡ループ</li>
-            </ul>
+            <button
+              className="flex items-center gap-1 w-full text-left"
+              onClick={() => setLegendOpen((v) => !v)}
+            >
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide flex-1">凡例</h3>
+              <span className={['text-gray-400 text-xs transition-transform duration-200', legendOpen ? 'rotate-180' : ''].join(' ')}>▼</span>
+            </button>
+            {legendOpen && (
+              <ul className="text-sm text-gray-600 space-y-1.5 mt-2">
+                <li><span className="text-green-600 font-bold">＋</span> 同方向（強化）</li>
+                <li><span className="text-red-600 font-bold">−</span> 逆方向（抑制）</li>
+                <li><span className="text-orange-600 font-bold">R</span> 強化ループ</li>
+                <li><span className="text-blue-600 font-bold">B</span> 均衡ループ</li>
+              </ul>
+            )}
           </section>
 
         </div>

@@ -1,11 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { ReactFlowProvider } from '@xyflow/react'
 import Toolbar from './components/Toolbar'
 import DiagramCanvas from './components/DiagramCanvas'
 import SidePanel from './components/SidePanel'
 import MobileToolbar from './components/MobileToolbar'
 import BottomSheet from './components/BottomSheet'
-import { useDiagramStore } from './store/diagramStore'
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
@@ -20,14 +19,6 @@ function useIsMobile() {
 function AppContent() {
   const isMobile = useIsMobile()
   const [panelOpen, setPanelOpen] = useState(false)
-  const { selectedNodeId, selectedEdgeId } = useDiagramStore()
-
-  // Auto-open panel when an element is selected on mobile
-  useEffect(() => {
-    if (isMobile && (selectedNodeId || selectedEdgeId)) {
-      setPanelOpen(true)
-    }
-  }, [selectedNodeId, selectedEdgeId, isMobile])
 
   if (isMobile) {
     return (

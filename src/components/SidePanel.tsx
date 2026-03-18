@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { useDiagramStore } from '../store/diagramStore'
 
 export default function SidePanel() {
+  const [legendOpen, setLegendOpen] = useState(false)
   const {
     loops, nodes, edges,
     selectedNodeId, selectedEdgeId, selectedLoopId,
@@ -116,28 +118,26 @@ export default function SidePanel() {
         )}
       </section>
 
-      {/* Legend */}
+      {/* Legend — collapsible */}
       <section className="mt-auto">
-        <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
-          凡例
-        </h3>
-        <ul className="text-xs text-gray-600 space-y-1">
-          <li>
-            <span className="text-green-600 font-bold">+</span> 同方向（強化）
-          </li>
-          <li>
-            <span className="text-red-600 font-bold">−</span> 逆方向（抑制）
-          </li>
-          <li>
-            <span className="text-orange-600 font-bold">R</span> 強化ループ
-          </li>
-          <li>
-            <span className="text-blue-600 font-bold">B</span> 均衡ループ
-          </li>
-          <li className="pt-1 text-gray-400">ノードをダブルクリックで編集</li>
-          <li className="text-gray-400">極性ラベルをクリックで切り替え</li>
-          <li className="text-gray-400">Deleteキーで選択要素を削除</li>
-        </ul>
+        <button
+          className="flex items-center gap-1 w-full text-left mb-1"
+          onClick={() => setLegendOpen((v) => !v)}
+        >
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide flex-1">凡例</h3>
+          <span className={['text-gray-400 text-xs transition-transform duration-200', legendOpen ? 'rotate-180' : ''].join(' ')}>▼</span>
+        </button>
+        {legendOpen && (
+          <ul className="text-xs text-gray-600 space-y-1">
+            <li><span className="text-green-600 font-bold">+</span> 同方向（強化）</li>
+            <li><span className="text-red-600 font-bold">−</span> 逆方向（抑制）</li>
+            <li><span className="text-orange-600 font-bold">R</span> 強化ループ</li>
+            <li><span className="text-blue-600 font-bold">B</span> 均衡ループ</li>
+            <li className="pt-1 text-gray-400">ノードをダブルクリックで編集</li>
+            <li className="text-gray-400">極性ラベルをクリックで切り替え</li>
+            <li className="text-gray-400">Deleteキーで選択要素を削除</li>
+          </ul>
+        )}
       </section>
     </aside>
   )
