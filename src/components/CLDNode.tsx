@@ -27,6 +27,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(data.label)
   const inputRef = useRef<HTMLInputElement>(null)
+  const lastTapRef = useRef<number>(0)
 
   useEffect(() => {
     setDraft(data.label)
@@ -49,6 +50,16 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     }
   }, [editing])
 
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const now = Date.now()
+    const delta = now - lastTapRef.current
+    if (delta < 300 && delta > 0) {
+      e.preventDefault()
+      setEditing(true)
+    }
+    lastTapRef.current = now
+  }
+
   const commitEdit = () => {
     const trimmed = draft.trim()
     if (trimmed) updateNodeLabel(id, trimmed)
@@ -59,6 +70,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   return (
     <div
       onDoubleClick={() => setEditing(true)}
+      onTouchEnd={handleTouchEnd}
       onClick={() => setSelectedNode(id)}
       className={[
         'px-4 py-2 rounded-full border-2 bg-white shadow-sm cursor-pointer select-none min-w-[80px] text-center',
@@ -110,6 +122,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
           <input
             ref={inputRef}
             value={draft}
+            inputMode="text"
             onChange={(e) => setDraft(e.target.value)}
             onBlur={commitEdit}
             onKeyDown={(e) => {
@@ -120,6 +133,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
               }
             }}
             onMouseDown={(e) => e.stopPropagation()}
+            onTouchEnd={(e) => e.stopPropagation()}
             className="text-sm font-medium text-gray-800 text-center bg-transparent outline-none absolute inset-0 w-full"
           />
         )}
