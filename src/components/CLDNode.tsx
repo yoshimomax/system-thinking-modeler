@@ -28,26 +28,37 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   const [draft, setDraft] = useState(data.label)
   const inputRef = useRef<HTMLInputElement>(null)
   const lastTapRef = useRef<number>(0)
+  // null = select all (new node), number = caret at that offset (double-click edit)
+  const pendingCaretPos = useRef<number | null>(null)
 
   useEffect(() => {
     setDraft(data.label)
   }, [data.label])
 
-  // Auto-enter edit mode when this node was just created
+  // Auto-enter edit mode when this node was just created — select all
   useEffect(() => {
     if (pendingEditNodeId === id) {
       clearPendingEdit()
+      pendingCaretPos.current = null
       setEditing(true)
     }
   }, [pendingEditNodeId, id, clearPendingEdit])
 
   useEffect(() => {
-    if (editing) {
-      setTimeout(() => {
-        inputRef.current?.focus()
-        inputRef.current?.select()
-      }, 50)
-    }
+    if (!editing) return
+    setTimeout(() => {
+      const input = inputRef.current
+      if (!input) return
+      input.focus()
+      const pos = pendingCaretPos.current
+      if (pos === null) {
+        input.select()
+      } else {
+        const safePos = Math.min(pos, input.value.length)
+        input.setSelectionRange(safePos, safePos)
+        pendingCaretPos.current = null
+      }
+    }, 50)
   }, [editing])
 
   const handleTouchEnd = (e: React.TouchEvent) => {
@@ -69,7 +80,23 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
 
   return (
     <div
-      onDoubleClick={() => setEditing(true)}
+      onDoubleClick={(e) => {
+      // Capture caret position from the span's text node while it is still visible
+      let caretPos: number | null = null
+      if (document.caretRangeFromPoint) {
+        const range = document.caretRangeFromPoint(e.clientX, e.clientY)
+        if (range?.startContainer.nodeType === Node.TEXT_NODE) {
+          caretPos = range.startOffset
+        }
+      } else if ('caretPositionFromPoint' in document) {
+        const pos = (document as Document & {
+          caretPositionFromPoint: (x: number, y: number) => { offset: number } | null
+        }).caretPositionFromPoint(e.clientX, e.clientY)
+        if (pos) caretPos = pos.offset
+      }
+      pendingCaretPos.current = caretPos ?? draft.length
+      setEditing(true)
+    }}
       onTouchEnd={handleTouchEnd}
       onClick={() => setSelectedNode(id)}
       className={[
