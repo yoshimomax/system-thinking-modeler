@@ -10,9 +10,9 @@ const SWIPE_CLOSE_THRESHOLD = 80
 
 export default function BottomSheet({ isOpen, onClose }: Props) {
   const {
-    loops, nodes, edges,
-    selectedNodeId, selectedEdgeId, selectedLoopId,
-    updateNodeLabel, deleteNode, deleteEdge,
+    loops, nodes,
+    selectedNodeId, selectedLoopId,
+    updateNodeLabel, deleteNode,
     setSelectedLoop, updateLoopName,
   } = useDiagramStore()
 
@@ -30,7 +30,6 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
   }
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId)
-  const selectedEdge = edges.find((e) => e.id === selectedEdgeId)
 
   return (
     <>
