@@ -342,6 +342,11 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   },
 
   loadDiagram: (nodes, edges) => {
+    // Advance nodeCounter past any existing node IDs to prevent collisions
+    nodes.forEach((n) => {
+      const m = n.id.match(/^node-(\d+)$/)
+      if (m) nodeCounter = Math.max(nodeCounter, parseInt(m[1]) + 1)
+    })
     const state = get()
     const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
     const loops = detectFeedbackLoops(nodes, edges)
