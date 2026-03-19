@@ -1,5 +1,5 @@
 import { memo, useState, useEffect, useRef } from 'react'
-import { Handle, Position, type NodeProps } from '@xyflow/react'
+import { Handle, Position, type NodeProps, useReactFlow } from '@xyflow/react'
 import { useDiagramStore, type CLDNode as CLDNodeType } from '../store/diagramStore'
 
 // Transparent handle covering the full length of each node edge.
@@ -17,6 +17,7 @@ const edgeHandleBase: React.CSSProperties = {
 
 function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   const { updateNodeLabel, setSelectedNode, pendingEditNodeId, clearPendingEdit } = useDiagramStore()
+  const { updateNode } = useReactFlow()
 
   const isLoopHighlighted = useDiagramStore((state) => {
     if (!state.selectedLoopId) return false
@@ -34,6 +35,11 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   useEffect(() => {
     setDraft(data.label)
   }, [data.label])
+
+  // Disable node dragging while editing so text selection works normally
+  useEffect(() => {
+    updateNode(id, { draggable: !editing })
+  }, [editing, id, updateNode])
 
   // Auto-enter edit mode when this node was just created — select all
   useEffect(() => {
@@ -100,7 +106,6 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     }}
       onTouchEnd={handleTouchEnd}
       onClick={() => setSelectedNode(id)}
-      onPointerDownCapture={editing ? (e) => e.stopPropagation() : undefined}
       className={[
         'px-4 py-2 rounded-full border-2 bg-white shadow-sm cursor-pointer select-none min-w-[80px] text-center',
         isLoopHighlighted
@@ -161,9 +166,6 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
                 setEditing(false)
               }
             }}
-            onMouseDown={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            onTouchEnd={(e) => e.stopPropagation()}
             className="text-sm font-medium text-gray-800 text-center bg-transparent outline-none absolute inset-0 w-full"
           />
         )}
