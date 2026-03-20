@@ -1,7 +1,7 @@
 import { memo, useRef } from 'react'
 import { EdgeLabelRenderer, useReactFlow, type EdgeProps } from '@xyflow/react'
 import { useDiagramStore, type CLDEdge as CLDEdgeType } from '../store/diagramStore'
-import { useSimulationStore } from '../store/simulationStore'
+import { useSimulationStore, selectEdgeSignals } from '../store/simulationStore'
 
 const DRAG_THRESHOLD = 4
 
@@ -102,12 +102,9 @@ function CLDEdge({
     return false
   })
 
-  // Simulation: signal particle traveling along this edge
-  const simSignalEffect = useSimulationStore((s) => s.getActiveEdgeEffects()[id] ?? null)
-  const simCurrentStep = useSimulationStore((s) => s.currentStep)
-  const simAnimSpeed = useSimulationStore((s) => s.animSpeed)
-  // Particle duration = 80% of step interval, min 600ms, max 1200ms
-  const particleDur = Math.min(1200, Math.max(600, simAnimSpeed * 0.8))
+  // Simulation: active signals traveling along this edge (stable ref when empty)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const mySignals = useSimulationStore(selectEdgeSignals(id))
 
   const polarity = data?.polarity ?? '+'
   const isPositive = polarity === '+'
@@ -261,27 +258,40 @@ function CLDEdge({
           strokeWidth: isLoopHighlighted ? 3 : selected ? 2 : 0.75,
         }}
       />
-      {/* Signal particle: animated dot traveling along the edge during simulation */}
-      {simSignalEffect && (
-        <circle
-          key={`signal-${id}-step-${simCurrentStep}`}
-          r="7"
-          fill={simSignalEffect === 'up' ? '#16a34a' : '#dc2626'}
-          stroke="white"
-          strokeWidth="2"
-          style={{ pointerEvents: 'none', filter: 'drop-shadow(0 0 3px rgba(0,0,0,0.4))' }}
-        >
-          <animateMotion
-            dur={`${particleDur}ms`}
-            begin="0s"
-            repeatCount="1"
-            fill="remove"
-            rotate="auto"
-          >
-            <mpath href={`#${id}`} />
-          </animateMotion>
-        </circle>
-      )}
+      {/* Signal particles: one circle per active signal, positioned by bezier math */}
+      {mySignals.map((sig) => {
+        const t = Math.max(0, Math.min(1, sig.progress))
+        const pos = bezierPoint(t, srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy)
+        const isUp = sig.strength > 0
+        return (
+          <g key={sig.id} style={{ pointerEvents: 'none' }}>
+            {/* Glow halo */}
+            <circle
+              cx={pos.x} cy={pos.y} r="11"
+              fill={isUp ? 'rgba(34,197,94,0.18)' : 'rgba(239,68,68,0.18)'}
+            />
+            {/* Main dot */}
+            <circle
+              cx={pos.x} cy={pos.y} r="7"
+              fill={isUp ? '#16a34a' : '#dc2626'}
+              stroke="white"
+              strokeWidth="2"
+            />
+            {/* ↑ / ↓ symbol */}
+            <text
+              x={pos.x} y={pos.y + 1}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fontSize="8"
+              fontWeight="bold"
+              fill="white"
+              style={{ userSelect: 'none' }}
+            >
+              {isUp ? '↑' : '↓'}
+            </text>
+          </g>
+        )
+      })}
 
       {/* Arrowhead at exact bezier–stadium intersection */}
       <polygon
