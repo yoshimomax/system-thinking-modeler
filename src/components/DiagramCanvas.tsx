@@ -65,7 +65,7 @@ export default function DiagramCanvas() {
     if (didInitialFit.current) return
     didInitialFit.current = true
     if (initialNodeCount.current > 0) {
-      setTimeout(() => fitView({ padding: 0.4 }), 80)
+      setTimeout(() => fitView({ padding: 0.4, duration: 400 }), 80)
     }
   }, [fitView])
 
@@ -74,7 +74,7 @@ export default function DiagramCanvas() {
     if (nodes.length > prevNodeCount.current && window.innerWidth < 768) {
       prevNodeCount.current = nodes.length
       setTimeout(() => {
-        fitView({ duration: 300, padding: 0.4, maxZoom: 1 })
+        fitView({ duration: 400, padding: 0.4, maxZoom: 1 })
       }, 80)
     } else {
       prevNodeCount.current = nodes.length
