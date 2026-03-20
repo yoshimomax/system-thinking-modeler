@@ -93,39 +93,30 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     setEditing(false)
   }
 
-  // Simulation state badge
-  let simBadge: React.ReactNode = null
-  if (simMode === 'simulation' && simState !== null) {
-    const badgeStyle: React.CSSProperties = {
-      position: 'absolute',
-      top: '-10px',
-      right: '-10px',
-      width: '22px',
-      height: '22px',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      fontSize: '13px',
-      fontWeight: 'bold',
-      pointerEvents: 'none',
-      zIndex: 10,
-      border: '2px solid white',
-      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
-      background:
-        simState === 'up' ? '#16a34a'
-        : simState === 'down' ? '#dc2626'
-        : simState === 'ambiguous' ? '#d97706'
-        : 'transparent',
-      color: 'white',
-    }
-    const symbol =
-      simState === 'up' ? '↑'
-      : simState === 'down' ? '↓'
-      : simState === 'ambiguous' ? '?'
-      : ''
-    if (symbol) simBadge = <div style={badgeStyle}>{symbol}</div>
-  }
+  // Simulation visual classes
+  const simBgClass =
+    simMode !== 'simulation' || simState === null || simState === 'neutral' ? 'bg-white'
+    : simState === 'up' ? 'bg-green-100'
+    : simState === 'down' ? 'bg-red-100'
+    : 'bg-amber-50'  // ambiguous
+
+  const simBorderClass =
+    simMode !== 'simulation' || simState === null || simState === 'neutral' ? ''
+    : simState === 'up' ? 'border-green-500'
+    : simState === 'down' ? 'border-red-500'
+    : 'border-amber-500'  // ambiguous
+
+  const simPulseAnim: React.CSSProperties =
+    simMode === 'simulation' && simState === 'up' ? { animation: 'sim-pulse-up 1.4s ease-in-out infinite' }
+    : simMode === 'simulation' && simState === 'down' ? { animation: 'sim-pulse-down 1.4s ease-in-out infinite' }
+    : {}
+
+  // State indicator badge (↑ ↓ ?) shown inside the node label area
+  const simSymbol =
+    simMode === 'simulation' && simState === 'up' ? ' ↑'
+    : simMode === 'simulation' && simState === 'down' ? ' ↓'
+    : simMode === 'simulation' && simState === 'ambiguous' ? ' ?'
+    : ''
 
   const handleClick = () => {
     if (simMode === 'simulation' && isSetupPhase) {
@@ -137,7 +128,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
 
   return (
     <div
-      style={{ position: 'relative' }}
+      style={{ position: 'relative', ...simPulseAnim }}
       onDoubleClick={(e) => {
         if (simMode === 'simulation') return
         e.stopPropagation()
@@ -160,14 +151,16 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
       onTouchEnd={handleTouchEnd}
       onClick={handleClick}
       className={[
-        'px-4 py-2 rounded-full border-2 bg-white shadow-sm cursor-pointer select-none min-w-[80px] text-center',
-        simMode === 'simulation' && isSetupPhase ? 'cursor-pointer hover:border-green-500' : '',
-        selected && simMode === 'edit' ? 'border-blue-500 shadow-blue-200 shadow-md' : isLoopHighlighted ? 'border-gray-700 shadow-md' : 'border-gray-500 hover:border-gray-700',
+        'px-4 py-2 rounded-full border-2 shadow-sm cursor-pointer select-none min-w-[80px] text-center transition-colors duration-300',
+        simBgClass,
+        simMode === 'simulation' && isSetupPhase ? 'hover:border-green-400' : '',
+        simBorderClass ||
+          (selected && simMode === 'edit' ? 'border-blue-500 shadow-blue-200 shadow-md'
+          : isLoopHighlighted ? 'border-gray-700 shadow-md'
+          : 'border-gray-500 hover:border-gray-700'),
         isLoopHighlighted ? 'ring-[3px] ring-gray-500 ring-offset-0' : '',
-        simState === 'up' ? 'border-green-500' : simState === 'down' ? 'border-red-500' : simState === 'ambiguous' ? 'border-amber-500' : '',
       ].join(' ')}
     >
-      {simBadge}
       {/* Full-width transparent handle along top edge */}
       <Handle
         type="source" position={Position.Top} id="top"
@@ -202,7 +195,18 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
             editing ? 'invisible' : '',
           ].join(' ')}
         >
-          {editing ? (draft || '\u00A0') : data.label}
+          {editing ? (draft || '\u00A0') : (
+            <>
+              {data.label}
+              {simSymbol && (
+                <span className={
+                  simState === 'up' ? 'text-green-700 font-bold'
+                  : simState === 'down' ? 'text-red-700 font-bold'
+                  : 'text-amber-700 font-bold'
+                }>{simSymbol}</span>
+              )}
+            </>
+          )}
         </span>
 
         {editing && (

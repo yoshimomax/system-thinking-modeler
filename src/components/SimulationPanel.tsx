@@ -1,17 +1,31 @@
 import { useDiagramStore } from '../store/diagramStore'
 import { useSimulationStore } from '../store/simulationStore'
+import { useSimulationAutoPlay } from '../hooks/useSimulationAutoPlay'
+
+const SPEED_OPTIONS = [
+  { label: '遅い', value: 2500 },
+  { label: '普通', value: 1500 },
+  { label: '速い', value: 700 },
+]
 
 export default function SimulationPanel() {
+  useSimulationAutoPlay()
+
   const { nodes, edges } = useDiagramStore()
   const {
     initialPerturbations,
     steps,
     currentStep,
+    isPlaying,
+    animSpeed,
     clearAllPerturbations,
     startSimulation,
     stepForward,
     stepBackward,
     resetSteps,
+    play,
+    pause,
+    setAnimSpeed,
   } = useSimulationStore()
 
   const isSetupPhase = steps.length === 0
@@ -65,19 +79,45 @@ export default function SimulationPanel() {
           </div>
 
           {nodes.length === 0 && (
-            <p className="text-xs text-gray-400 text-center">
-              先にノードを追加してください
-            </p>
+            <p className="text-xs text-gray-400 text-center">先にノードを追加してください</p>
           )}
         </>
       ) : (
         <>
+          {/* Play/Pause + speed controls */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={isPlaying ? pause : play}
+              disabled={isAtEnd && !isPlaying}
+              className={[
+                'flex-1 px-3 py-1.5 rounded text-sm font-medium transition-colors',
+                isPlaying
+                  ? 'bg-amber-500 hover:bg-amber-600 text-white'
+                  : isAtEnd
+                    ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                    : 'bg-green-600 hover:bg-green-700 text-white',
+              ].join(' ')}
+            >
+              {isPlaying ? '⏸ 一時停止' : isAtEnd ? '完了' : '▶ 再生'}
+            </button>
+
+            <select
+              value={animSpeed}
+              onChange={(e) => setAnimSpeed(Number(e.target.value))}
+              className="text-xs border border-gray-300 rounded px-1 py-1.5 bg-white text-gray-600"
+            >
+              {SPEED_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>{opt.label}</option>
+              ))}
+            </select>
+          </div>
+
           {/* Step navigation */}
           <div className="flex items-center gap-2">
             <button
               onClick={stepBackward}
               disabled={currentStep === 0}
-              className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               ◀
             </button>
@@ -87,7 +127,7 @@ export default function SimulationPanel() {
             <button
               onClick={stepForward}
               disabled={isAtEnd}
-              className="px-2 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              className="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               ▶
             </button>
@@ -95,8 +135,8 @@ export default function SimulationPanel() {
 
           {/* Step info */}
           {currentStep === 0 ? (
-            <div className="text-xs text-gray-500 text-center">
-              ▶ を押して伝播を開始
+            <div className="text-xs text-gray-500 text-center bg-gray-50 rounded p-2">
+              ▶ 再生 または ▶ を押して伝播を開始
             </div>
           ) : currentStepInfo && currentStepInfo.newNodeIds.length > 0 ? (
             <div className="flex flex-col gap-1">
