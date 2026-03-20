@@ -37,6 +37,7 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
         const parsed = JSON.parse(ev.target?.result as string)
         if (parsed.nodes && parsed.edges) {
           loadDiagram(parsed.nodes as CLDNode[], parsed.edges as CLDEdge[])
+          setTimeout(() => fitView({ padding: 0.4, duration: 400 }), 80)
         }
       } catch {
         alert('ファイルの読み込みに失敗しました。')
