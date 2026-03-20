@@ -1,5 +1,7 @@
 import { useRef, useState } from 'react'
 import { useDiagramStore } from '../store/diagramStore'
+import { useSimulationStore } from '../store/simulationStore'
+import SimulationPanel from './SimulationPanel'
 
 interface Props {
   isOpen: boolean
@@ -18,6 +20,7 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
 
   const [legendOpen, setLegendOpen] = useState(false)
   const touchStartY = useRef<number | null>(null)
+  const simMode = useSimulationStore((s) => s.mode)
   const [dragOffset, setDragOffset] = useState(0)
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -72,6 +75,16 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
         </div>
 
         <div className="overflow-y-auto flex flex-col gap-4 px-4 pt-2 pb-6">
+
+          {/* Simulation panel */}
+          {simMode === 'simulation' && (
+            <section>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">
+                定性シミュレーション
+              </h3>
+              <SimulationPanel />
+            </section>
+          )}
 
           {/* Selected node */}
           {selectedNode && (

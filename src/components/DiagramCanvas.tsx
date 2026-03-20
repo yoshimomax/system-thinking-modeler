@@ -13,6 +13,7 @@ import {
   type ConnectionLineComponentProps,
 } from '@xyflow/react'
 import { useDiagramStore } from '../store/diagramStore'
+import { useSimulationStore } from '../store/simulationStore'
 import CLDNode from './CLDNode'
 import CLDEdge from './CLDEdge'
 
@@ -54,6 +55,7 @@ export default function DiagramCanvas() {
   } = useDiagramStore()
 
   const { fitView, screenToFlowPosition } = useReactFlow()
+  const isSimMode = useSimulationStore((s) => s.mode === 'simulation')
   const prevNodeCount = useRef(nodes.length)
   const didInitialFit = useRef(false)
   const initialNodeCount = useRef(nodes.length)
@@ -100,15 +102,17 @@ export default function DiagramCanvas() {
 
   const onCanvasDoubleClick = useCallback(
     (e: React.MouseEvent) => {
+      if (isSimMode) return
       if (!(e.target as Element).closest('.react-flow__pane')) return
       const center = screenToFlowPosition({ x: e.clientX, y: e.clientY })
       addNode(undefined, { x: center.x - 40, y: center.y - 18 })
     },
-    [addNode, screenToFlowPosition]
+    [addNode, screenToFlowPosition, isSimMode]
   )
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if (isSimMode) return
       const tag = (e.target as HTMLElement).tagName
       const isEditing = tag === 'INPUT' || tag === 'TEXTAREA' || (e.target as HTMLElement).isContentEditable
 
@@ -199,8 +203,11 @@ export default function DiagramCanvas() {
         zoomOnDoubleClick={false}
         zoomOnPinch={isMobile}
         panOnScroll={false}
-        panOnDrag={isMobile ? false : [1, 2]}
-        selectionOnDrag
+        panOnDrag={isSimMode ? true : isMobile ? false : [1, 2]}
+        selectionOnDrag={!isSimMode}
+        nodesDraggable={!isSimMode}
+        nodesConnectable={!isSimMode}
+        elementsSelectable={!isSimMode}
       >
         <Background gap={20} color="#e5e7eb" />
         <Controls fitViewOptions={{ padding: 0.4, duration: 400 }} />

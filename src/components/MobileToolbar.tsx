@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useDiagramStore, type CLDNode, type CLDEdge } from '../store/diagramStore'
+import { useSimulationStore } from '../store/simulationStore'
 
 interface Props {
   onShowPanel: () => void
@@ -11,6 +12,8 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
   const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
   const { fitView } = useReactFlow()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { mode, setMode } = useSimulationStore()
+  const isSimMode = mode === 'simulation'
 
   const handleSave = () => {
     const data = JSON.stringify({ nodes, edges }, null, 2)
@@ -56,7 +59,21 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)', touchAction: 'manipulation' }}>
       <div className="flex items-center justify-around">
 
-        {/* Add Node - primary action */}
+        {/* Simulation mode toggle */}
+        <button
+          onClick={() => setMode(isSimMode ? 'edit' : 'simulation')}
+          className={`flex flex-col items-center py-2 px-3 active:opacity-60 ${isSimMode ? 'text-green-600' : 'text-gray-600'}`}
+          style={{ touchAction: 'manipulation' }}
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span className="text-[10px] mt-0.5 font-medium">{isSimMode ? 'シミュ中' : 'シミュ'}</span>
+        </button>
+
+        {/* Add Node - primary action (hidden in sim mode) */}
+        {!isSimMode && (
         <button
           onPointerDown={(e) => { e.stopPropagation(); addNode('変数') }}
           className="flex flex-col items-center py-2 px-3 text-blue-600 active:opacity-60"
@@ -68,6 +85,7 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
           </svg>
           <span className="text-[10px] mt-0.5 font-medium">追加</span>
         </button>
+        )}
 
         {/* Fit View */}
         <button

@@ -1,9 +1,12 @@
 import { useRef } from 'react'
 import { useDiagramStore, type CLDNode, type CLDEdge } from '../store/diagramStore'
+import { useSimulationStore } from '../store/simulationStore'
 
 export default function Toolbar() {
   const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { mode, setMode } = useSimulationStore()
+  const isSimMode = mode === 'simulation'
 
   const handleAddNode = () => {
     addNode('変数')
@@ -53,53 +56,77 @@ export default function Toolbar() {
     <header className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200 shadow-sm">
       <span className="font-bold text-gray-800 mr-2">CLD エディタ</span>
 
-      <button
-        onClick={handleAddNode}
-        className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 active:bg-blue-800"
-      >
-        + ノード追加
-      </button>
+      {/* Mode toggle */}
+      <div className="flex rounded overflow-hidden border border-gray-300 text-sm font-medium shrink-0">
+        <button
+          onClick={() => setMode('edit')}
+          className={['px-3 py-1.5 transition-colors', !isSimMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'].join(' ')}
+        >
+          編集
+        </button>
+        <button
+          onClick={() => setMode('simulation')}
+          className={['px-3 py-1.5 transition-colors border-l border-gray-300', isSimMode ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-100'].join(' ')}
+        >
+          シミュレーション
+        </button>
+      </div>
 
       <div className="h-5 w-px bg-gray-300 mx-1" />
 
-      <button
-        onClick={handleSave}
-        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 border border-gray-300"
-      >
-        保存 (JSON)
-      </button>
+      {!isSimMode && (
+        <button
+          onClick={handleAddNode}
+          className="px-3 py-1.5 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700 active:bg-blue-800"
+        >
+          + ノード追加
+        </button>
+      )}
 
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 border border-gray-300"
-      >
-        読み込み
-      </button>
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".json"
-        onChange={handleLoad}
-        className="hidden"
-      />
+      {!isSimMode && <div className="h-5 w-px bg-gray-300 mx-1" />}
 
-      <button
-        onClick={handleExportPNG}
-        className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 border border-gray-300"
-      >
-        PNG 出力
-      </button>
+      {!isSimMode && (
+        <>
+          <button
+            onClick={handleSave}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 border border-gray-300"
+          >
+            保存 (JSON)
+          </button>
 
-      <div className="h-5 w-px bg-gray-300 mx-1" />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 border border-gray-300"
+          >
+            読み込み
+          </button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            onChange={handleLoad}
+            className="hidden"
+          />
 
-      <button
-        onClick={() => {
-          if (confirm('ダイアグラムをすべてクリアしますか？')) clearDiagram()
-        }}
-        className="px-3 py-1.5 bg-red-50 text-red-600 rounded text-sm font-medium hover:bg-red-100 border border-red-200"
-      >
-        クリア
-      </button>
+          <button
+            onClick={handleExportPNG}
+            className="px-3 py-1.5 bg-gray-100 text-gray-700 rounded text-sm font-medium hover:bg-gray-200 border border-gray-300"
+          >
+            PNG 出力
+          </button>
+
+          <div className="h-5 w-px bg-gray-300 mx-1" />
+
+          <button
+            onClick={() => {
+              if (confirm('ダイアグラムをすべてクリアしますか？')) clearDiagram()
+            }}
+            className="px-3 py-1.5 bg-red-50 text-red-600 rounded text-sm font-medium hover:bg-red-100 border border-red-200"
+          >
+            クリア
+          </button>
+        </>
+      )}
     </header>
   )
 }

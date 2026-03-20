@@ -1,6 +1,7 @@
 import { memo, useState, useEffect, useRef } from 'react'
 import { Handle, Position, type NodeProps, useReactFlow } from '@xyflow/react'
 import { useDiagramStore, type CLDNode as CLDNodeType } from '../store/diagramStore'
+import { useSimulationStore } from '../store/simulationStore'
 
 // Transparent handle covering the full length of each node edge.
 // No visible indicator — the crosshair cursor signals "drag here to connect".
@@ -24,6 +25,14 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     const loop = state.loops.find((l) => l.id === state.selectedLoopId)
     return loop ? loop.nodeIds.includes(id) : false
   })
+
+  const simMode = useSimulationStore((s) => s.mode)
+  const simState = useSimulationStore((s) => {
+    if (s.mode === 'edit') return null
+    return s.getDisplayStates()[id] ?? null
+  })
+  const cyclePerturbation = useSimulationStore((s) => s.cyclePerturbation)
+  const isSetupPhase = useSimulationStore((s) => s.steps.length === 0)
 
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(data.label)
@@ -84,34 +93,81 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     setEditing(false)
   }
 
+  // Simulation state badge
+  let simBadge: React.ReactNode = null
+  if (simMode === 'simulation' && simState !== null) {
+    const badgeStyle: React.CSSProperties = {
+      position: 'absolute',
+      top: '-10px',
+      right: '-10px',
+      width: '22px',
+      height: '22px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '13px',
+      fontWeight: 'bold',
+      pointerEvents: 'none',
+      zIndex: 10,
+      border: '2px solid white',
+      boxShadow: '0 1px 3px rgba(0,0,0,0.2)',
+      background:
+        simState === 'up' ? '#16a34a'
+        : simState === 'down' ? '#dc2626'
+        : simState === 'ambiguous' ? '#d97706'
+        : 'transparent',
+      color: 'white',
+    }
+    const symbol =
+      simState === 'up' ? '↑'
+      : simState === 'down' ? '↓'
+      : simState === 'ambiguous' ? '?'
+      : ''
+    if (symbol) simBadge = <div style={badgeStyle}>{symbol}</div>
+  }
+
+  const handleClick = () => {
+    if (simMode === 'simulation' && isSetupPhase) {
+      cyclePerturbation(id)
+    } else if (simMode === 'edit') {
+      setSelectedNode(id)
+    }
+  }
+
   return (
     <div
+      style={{ position: 'relative' }}
       onDoubleClick={(e) => {
-      e.stopPropagation()
-      // Capture caret position from the span's text node while it is still visible
-      let caretPos: number | null = null
-      if (document.caretRangeFromPoint) {
-        const range = document.caretRangeFromPoint(e.clientX, e.clientY)
-        if (range?.startContainer.nodeType === Node.TEXT_NODE) {
-          caretPos = range.startOffset
+        if (simMode === 'simulation') return
+        e.stopPropagation()
+        // Capture caret position from the span's text node while it is still visible
+        let caretPos: number | null = null
+        if (document.caretRangeFromPoint) {
+          const range = document.caretRangeFromPoint(e.clientX, e.clientY)
+          if (range?.startContainer.nodeType === Node.TEXT_NODE) {
+            caretPos = range.startOffset
+          }
+        } else if ('caretPositionFromPoint' in document) {
+          const pos = (document as Document & {
+            caretPositionFromPoint: (x: number, y: number) => { offset: number } | null
+          }).caretPositionFromPoint(e.clientX, e.clientY)
+          if (pos) caretPos = pos.offset
         }
-      } else if ('caretPositionFromPoint' in document) {
-        const pos = (document as Document & {
-          caretPositionFromPoint: (x: number, y: number) => { offset: number } | null
-        }).caretPositionFromPoint(e.clientX, e.clientY)
-        if (pos) caretPos = pos.offset
-      }
-      pendingCaretPos.current = caretPos ?? draft.length
-      setEditing(true)
-    }}
+        pendingCaretPos.current = caretPos ?? draft.length
+        setEditing(true)
+      }}
       onTouchEnd={handleTouchEnd}
-      onClick={() => setSelectedNode(id)}
+      onClick={handleClick}
       className={[
         'px-4 py-2 rounded-full border-2 bg-white shadow-sm cursor-pointer select-none min-w-[80px] text-center',
-        selected ? 'border-blue-500 shadow-blue-200 shadow-md' : isLoopHighlighted ? 'border-gray-700 shadow-md' : 'border-gray-500 hover:border-gray-700',
+        simMode === 'simulation' && isSetupPhase ? 'cursor-pointer hover:border-green-500' : '',
+        selected && simMode === 'edit' ? 'border-blue-500 shadow-blue-200 shadow-md' : isLoopHighlighted ? 'border-gray-700 shadow-md' : 'border-gray-500 hover:border-gray-700',
         isLoopHighlighted ? 'ring-[3px] ring-gray-500 ring-offset-0' : '',
+        simState === 'up' ? 'border-green-500' : simState === 'down' ? 'border-red-500' : simState === 'ambiguous' ? 'border-amber-500' : '',
       ].join(' ')}
     >
+      {simBadge}
       {/* Full-width transparent handle along top edge */}
       <Handle
         type="source" position={Position.Top} id="top"

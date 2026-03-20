@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useDiagramStore } from '../store/diagramStore'
+import { useSimulationStore } from '../store/simulationStore'
+import SimulationPanel from './SimulationPanel'
 
 interface Props {
   isOpen: boolean
@@ -8,6 +10,7 @@ interface Props {
 
 export default function SidePanel({ isOpen, onToggle }: Props) {
   const [legendOpen, setLegendOpen] = useState(false)
+  const simMode = useSimulationStore((s) => s.mode)
   const {
     loops, nodes, edges,
     selectedNodeId, selectedEdgeId, selectedLoopId,
@@ -49,6 +52,18 @@ export default function SidePanel({ isOpen, onToggle }: Props) {
           </svg>
         </button>
       </div>
+
+      {/* Simulation panel (replaces normal content in sim mode) */}
+      {simMode === 'simulation' && (
+        <section>
+          <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-2">
+            定性シミュレーション
+          </h3>
+          <SimulationPanel />
+        </section>
+      )}
+
+      {simMode === 'simulation' && <div className="border-t border-gray-200" />}
 
       {/* Selected element properties */}
       {selectedNode && (
