@@ -1,12 +1,14 @@
 import { useRef } from 'react'
 import { useDiagramStore, type CLDNode, type CLDEdge } from '../store/diagramStore'
 import { useSimulationStore } from '../store/simulationStore'
+import { useUiStore } from '../store/uiStore'
 
 export default function Toolbar() {
   const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { mode, setMode } = useSimulationStore()
   const isSimMode = mode === 'simulation'
+  const { trackpadMode, setTrackpadMode } = useUiStore()
 
   const handleAddNode = () => {
     addNode('変数')
@@ -71,6 +73,35 @@ export default function Toolbar() {
           シミュレーション
         </button>
       </div>
+
+      {/* Trackpad mode toggle */}
+      <button
+        onClick={() => setTrackpadMode(!trackpadMode)}
+        title={trackpadMode ? 'トラックパッドモード (クリックでマウスモードに切替)' : 'マウスモード (クリックでトラックパッドモードに切替)'}
+        className={[
+          'flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium border transition-colors shrink-0',
+          trackpadMode
+            ? 'bg-indigo-50 border-indigo-300 text-indigo-700 hover:bg-indigo-100'
+            : 'bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200',
+        ].join(' ')}
+      >
+        {trackpadMode ? (
+          /* Trackpad icon: rounded rect with lines */
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <rect x="2" y="2" width="12" height="12" rx="2" />
+            <line x1="8" y1="2" x2="8" y2="14" />
+            <line x1="2" y1="9" x2="14" y2="9" />
+          </svg>
+        ) : (
+          /* Mouse icon: pointer with scroll wheel */
+          <svg className="w-4 h-4" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M8 2C5.8 2 4 3.8 4 6v4c0 2.2 1.8 4 4 4s4-1.8 4-4V6c0-2.2-1.8-4-4-4z" />
+            <line x1="8" y1="2" x2="8" y2="6" />
+            <line x1="8" y1="6" x2="8" y2="8" strokeWidth="2" />
+          </svg>
+        )}
+        {trackpadMode ? 'トラックパッド' : 'マウス'}
+      </button>
 
       <div className="h-5 w-px bg-gray-300 mx-1" />
 

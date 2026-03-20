@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { useReactFlow } from '@xyflow/react'
 import { useDiagramStore, type CLDNode, type CLDEdge } from '../store/diagramStore'
 import { useSimulationStore } from '../store/simulationStore'
+import { useUiStore } from '../store/uiStore'
 
 interface Props {
   onShowPanel: () => void
@@ -14,6 +15,7 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { mode, setMode } = useSimulationStore()
   const isSimMode = mode === 'simulation'
+  const { trackpadMode, setTrackpadMode } = useUiStore()
 
   const handleSave = () => {
     const data = JSON.stringify({ nodes, edges }, null, 2)
@@ -86,6 +88,20 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
           <span className="text-[10px] mt-0.5 font-medium">追加</span>
         </button>
         )}
+
+        {/* Trackpad mode toggle */}
+        <button
+          onClick={() => setTrackpadMode(!trackpadMode)}
+          className={`flex flex-col items-center py-2 px-3 active:opacity-60 ${trackpadMode ? 'text-indigo-600' : 'text-gray-600'}`}
+          style={{ touchAction: 'manipulation' }}
+        >
+          <svg className="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <rect x="4" y="4" width="16" height="16" rx="3" />
+            <line x1="12" y1="4" x2="12" y2="20" />
+            <line x1="4" y1="13" x2="20" y2="13" />
+          </svg>
+          <span className="text-[10px] mt-0.5 font-medium">{trackpadMode ? 'パッド中' : 'パッド'}</span>
+        </button>
 
         {/* Fit View */}
         <button
