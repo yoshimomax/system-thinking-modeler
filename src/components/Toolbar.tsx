@@ -1,4 +1,5 @@
 import { useRef } from 'react'
+import { useReactFlow } from '@xyflow/react'
 import { useDiagramStore, type CLDNode, type CLDEdge } from '../store/diagramStore'
 import { useSimulationStore } from '../store/simulationStore'
 import { useUiStore } from '../store/uiStore'
@@ -6,6 +7,7 @@ import { useUiStore } from '../store/uiStore'
 export default function Toolbar() {
   const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const { fitView } = useReactFlow()
   const { mode, setMode } = useSimulationStore()
   const isSimMode = mode === 'simulation'
   const { trackpadMode, setTrackpadMode } = useUiStore()
@@ -34,6 +36,7 @@ export default function Toolbar() {
         const parsed = JSON.parse(ev.target?.result as string)
         if (parsed.nodes && parsed.edges) {
           loadDiagram(parsed.nodes as CLDNode[], parsed.edges as CLDEdge[])
+          setTimeout(() => fitView({ padding: 0.4, duration: 400 }), 80)
         }
       } catch {
         alert('ファイルの読み込みに失敗しました。')
