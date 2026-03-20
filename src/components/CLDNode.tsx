@@ -108,11 +108,8 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
       onClick={() => setSelectedNode(id)}
       className={[
         'px-4 py-2 rounded-full border-2 bg-white shadow-sm cursor-pointer select-none min-w-[80px] text-center',
-        isLoopHighlighted
-          ? 'border-gray-700 ring-[3px] ring-gray-500 ring-offset-0 shadow-md'
-          : selected
-            ? 'border-blue-500 shadow-blue-200 shadow-md'
-            : 'border-gray-500 hover:border-gray-700',
+        selected ? 'border-blue-500 shadow-blue-200 shadow-md' : isLoopHighlighted ? 'border-gray-700 shadow-md' : 'border-gray-500 hover:border-gray-700',
+        isLoopHighlighted ? 'ring-[3px] ring-gray-500 ring-offset-0' : '',
       ].join(' ')}
     >
       {/* Full-width transparent handle along top edge */}
