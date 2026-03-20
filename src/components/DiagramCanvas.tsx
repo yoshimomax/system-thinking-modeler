@@ -203,7 +203,7 @@ export default function DiagramCanvas() {
         selectionOnDrag
       >
         <Background gap={20} color="#e5e7eb" />
-        <Controls />
+        <Controls fitViewOptions={{ padding: 0.4, duration: 400 }} />
         <MiniMap nodeColor="#93c5fd" maskColor="rgba(0,0,0,0.05)" />
       </ReactFlow>
     </div>
