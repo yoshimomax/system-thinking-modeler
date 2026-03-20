@@ -14,6 +14,7 @@ import {
 } from '@xyflow/react'
 import { useDiagramStore } from '../store/diagramStore'
 import { useSimulationStore } from '../store/simulationStore'
+import { useUiStore } from '../store/uiStore'
 import CLDNode from './CLDNode'
 import CLDEdge from './CLDEdge'
 
@@ -56,6 +57,7 @@ export default function DiagramCanvas() {
 
   const { fitView, screenToFlowPosition } = useReactFlow()
   const isSimMode = useSimulationStore((s) => s.mode === 'simulation')
+  const trackpadMode = useUiStore((s) => s.trackpadMode)
   const prevNodeCount = useRef(nodes.length)
   const didInitialFit = useRef(false)
   const initialNodeCount = useRef(nodes.length)
@@ -201,10 +203,10 @@ export default function DiagramCanvas() {
         connectionRadius={50}
         deleteKeyCode={null}
         zoomOnDoubleClick={false}
-        zoomOnPinch={isMobile}
-        panOnScroll={false}
-        panOnDrag={isSimMode ? true : isMobile ? false : [1, 2]}
-        selectionOnDrag={!isSimMode}
+        zoomOnPinch={isMobile || trackpadMode}
+        panOnScroll={trackpadMode}
+        panOnDrag={isSimMode ? true : trackpadMode ? true : isMobile ? false : [1, 2]}
+        selectionOnDrag={!isSimMode && !trackpadMode}
         nodesDraggable={!isSimMode}
         nodesConnectable={!isSimMode}
         elementsSelectable={!isSimMode}
