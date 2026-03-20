@@ -1,6 +1,7 @@
 import { memo, useRef } from 'react'
 import { EdgeLabelRenderer, useReactFlow, type EdgeProps } from '@xyflow/react'
 import { useDiagramStore, type CLDEdge as CLDEdgeType } from '../store/diagramStore'
+import { useSimulationStore } from '../store/simulationStore'
 
 const DRAG_THRESHOLD = 4
 
@@ -100,6 +101,13 @@ function CLDEdge({
     }
     return false
   })
+
+  // Simulation: signal particle traveling along this edge
+  const simSignalEffect = useSimulationStore((s) => s.getActiveEdgeEffects()[id] ?? null)
+  const simCurrentStep = useSimulationStore((s) => s.currentStep)
+  const simAnimSpeed = useSimulationStore((s) => s.animSpeed)
+  // Particle duration = 80% of step interval, min 600ms, max 1200ms
+  const particleDur = Math.min(1200, Math.max(600, simAnimSpeed * 0.8))
 
   const polarity = data?.polarity ?? '+'
   const isPositive = polarity === '+'
@@ -253,6 +261,28 @@ function CLDEdge({
           strokeWidth: isLoopHighlighted ? 3 : selected ? 2 : 0.75,
         }}
       />
+      {/* Signal particle: animated dot traveling along the edge during simulation */}
+      {simSignalEffect && (
+        <circle
+          key={`signal-${id}-step-${simCurrentStep}`}
+          r="7"
+          fill={simSignalEffect === 'up' ? '#16a34a' : '#dc2626'}
+          stroke="white"
+          strokeWidth="2"
+          style={{ pointerEvents: 'none', filter: 'drop-shadow(0 0 3px rgba(0,0,0,0.4))' }}
+        >
+          <animateMotion
+            dur={`${particleDur}ms`}
+            begin="0s"
+            repeatCount="1"
+            fill="remove"
+            rotate="auto"
+          >
+            <mpath href={`#${id}`} />
+          </animateMotion>
+        </circle>
+      )}
+
       {/* Arrowhead at exact bezier–stadium intersection */}
       <polygon
         points={arrowPoints}

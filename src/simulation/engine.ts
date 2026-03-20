@@ -7,6 +7,8 @@ export interface SimulationStep {
   states: Record<string, NodeSimState>
   /** Edges that propagated signals in this step */
   activeEdgeIds: string[]
+  /** What effect each active edge carries: edge ID → 'up' | 'down' */
+  activeEdgeEffects: Record<string, 'up' | 'down'>
   /** Nodes whose state changed in this step */
   newNodeIds: string[]
 }
@@ -38,6 +40,7 @@ export function runSimulation(
   const steps: SimulationStep[] = [{
     states: step0States,
     activeEdgeIds: [],
+    activeEdgeEffects: {},
     newNodeIds: Object.keys(initialPerturbations),
   }]
 
@@ -47,6 +50,7 @@ export function runSimulation(
   for (let i = 0; i < maxSteps; i++) {
     const newStates = { ...currentStates }
     const activeEdgeIds: string[] = []
+    const activeEdgeEffects: Record<string, 'up' | 'down'> = {}
     const changedNodes = new Set<string>()
 
     for (const edge of edges) {
@@ -63,6 +67,7 @@ export function runSimulation(
       const polarity = (edge.data?.polarity ?? '+') as '+' | '-'
       const effect = applyPolarity(sourceState, polarity)
       activeEdgeIds.push(edge.id)
+      activeEdgeEffects[edge.id] = effect
 
       const targetCurrent = newStates[edge.target]
       if (targetCurrent === 'neutral') {
@@ -81,6 +86,7 @@ export function runSimulation(
     steps.push({
       states: newStates,
       activeEdgeIds,
+      activeEdgeEffects,
       newNodeIds: [...changedNodes],
     })
     currentStates = newStates

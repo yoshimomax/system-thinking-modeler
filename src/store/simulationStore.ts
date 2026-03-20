@@ -12,22 +12,29 @@ interface SimulationState {
   steps: SimulationStep[]
   /** Current step index into steps[] */
   currentStep: number
+  /** Auto-play active */
+  isPlaying: boolean
+  /** Milliseconds between auto-play steps */
+  animSpeed: number
 
   // Actions
   setMode: (mode: SimMode) => void
   /** Cycle through: none → up → down → none */
   cyclePerturbation: (nodeId: string) => void
   clearAllPerturbations: () => void
-  /** Compute all steps and start playback from step 0 */
+  /** Compute all steps and start from step 0 */
   startSimulation: (nodes: CLDNode[], edges: CLDEdge[]) => void
   stepForward: () => void
   stepBackward: () => void
   /** Clear computed steps but keep perturbations (back to setup phase) */
   resetSteps: () => void
+  play: () => void
+  pause: () => void
+  setAnimSpeed: (ms: number) => void
   /** Get display states for the current view */
   getDisplayStates: () => Record<string, NodeSimState>
-  /** IDs of edges active in the current step */
-  getActiveEdgeIds: () => string[]
+  /** Edge effects active in the current step (for particle animation) */
+  getActiveEdgeEffects: () => Record<string, 'up' | 'down'>
 }
 
 export const useSimulationStore = create<SimulationState>((set, get) => ({
@@ -35,11 +42,12 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   initialPerturbations: {},
   steps: [],
   currentStep: 0,
+  isPlaying: false,
+  animSpeed: 1500,
 
   setMode: (mode) => {
     if (mode === 'edit') {
-      // Clear all simulation state when returning to edit mode
-      set({ mode, steps: [], currentStep: 0, initialPerturbations: {} })
+      set({ mode, steps: [], currentStep: 0, initialPerturbations: {}, isPlaying: false })
     } else {
       set({ mode })
     }
@@ -56,12 +64,11 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
       } else {
         delete newPerturbs[nodeId]
       }
-      // Reset steps when perturbations change
-      return { initialPerturbations: newPerturbs, steps: [], currentStep: 0 }
+      return { initialPerturbations: newPerturbs, steps: [], currentStep: 0, isPlaying: false }
     })
   },
 
-  clearAllPerturbations: () => set({ initialPerturbations: {}, steps: [], currentStep: 0 }),
+  clearAllPerturbations: () => set({ initialPerturbations: {}, steps: [], currentStep: 0, isPlaying: false }),
 
   startSimulation: (nodes, edges) => {
     const { initialPerturbations } = get()
@@ -71,26 +78,31 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
   },
 
   stepForward: () => {
-    const { steps, currentStep } = get()
+    const { steps, currentStep, isPlaying, pause } = get()
     if (currentStep < steps.length - 1) {
       set({ currentStep: currentStep + 1 })
+    } else if (isPlaying) {
+      pause()
     }
   },
 
   stepBackward: () => {
     const { currentStep } = get()
     if (currentStep > 0) {
-      set({ currentStep: currentStep - 1 })
+      set({ currentStep: currentStep - 1, isPlaying: false })
     }
   },
 
-  resetSteps: () => set({ steps: [], currentStep: 0 }),
+  resetSteps: () => set({ steps: [], currentStep: 0, isPlaying: false }),
+
+  play: () => set({ isPlaying: true }),
+  pause: () => set({ isPlaying: false }),
+  setAnimSpeed: (ms) => set({ animSpeed: ms }),
 
   getDisplayStates: () => {
     const { steps, currentStep, initialPerturbations, mode } = get()
     if (mode === 'edit') return {}
     if (steps.length === 0) {
-      // Setup phase: show only perturbations
       return Object.fromEntries(
         Object.entries(initialPerturbations)
       ) as Record<string, NodeSimState>
@@ -98,9 +110,9 @@ export const useSimulationStore = create<SimulationState>((set, get) => ({
     return steps[currentStep]?.states ?? {}
   },
 
-  getActiveEdgeIds: () => {
+  getActiveEdgeEffects: () => {
     const { steps, currentStep } = get()
-    if (steps.length === 0 || currentStep === 0) return []
-    return steps[currentStep]?.activeEdgeIds ?? []
+    if (steps.length === 0 || currentStep === 0) return {}
+    return steps[currentStep]?.activeEdgeEffects ?? {}
   },
 }))
