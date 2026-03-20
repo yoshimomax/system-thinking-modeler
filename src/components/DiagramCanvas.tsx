@@ -56,12 +56,17 @@ export default function DiagramCanvas() {
   const { fitView, screenToFlowPosition } = useReactFlow()
   const prevNodeCount = useRef(nodes.length)
   const didInitialFit = useRef(false)
+  const initialNodeCount = useRef(nodes.length)
 
-  // Initial fitView — runs once after nodes are first laid out
+  // Initial fitView — runs once after nodes are first laid out.
+  // Skip when starting fresh (0 nodes) so a first double-click creates the node
+  // at the clicked position instead of having fitView re-center the viewport.
   useEffect(() => {
     if (didInitialFit.current) return
     didInitialFit.current = true
-    setTimeout(() => fitView({ padding: 0.4 }), 80)
+    if (initialNodeCount.current > 0) {
+      setTimeout(() => fitView({ padding: 0.4 }), 80)
+    }
   }, [fitView])
 
   // On mobile: whenever a node is added, fit the view to show it
