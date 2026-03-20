@@ -15,6 +15,7 @@ export type Polarity = '+' | '-'
 export interface CLDEdgeData extends Record<string, unknown> {
   polarity: Polarity
   controlPoint?: { x: number; y: number }
+  delay?: boolean
 }
 
 export interface CLDNodeData extends Record<string, unknown> {
@@ -56,6 +57,7 @@ interface DiagramState {
   deleteItems: (nodeIds: string[], edgeIds: string[]) => void
 
   toggleEdgePolarity: (id: string) => void
+  toggleEdgeDelay: (id: string) => void
   updateEdgeControlPoint: (id: string, cp: { x: number; y: number } | null) => void
   deleteEdge: (id: string) => void
 
@@ -262,6 +264,18 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
     })
   },
 
+  toggleEdgeDelay: (id) => {
+    set((state) => {
+      const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
+      const edges = state.edges.map((e) =>
+        e.id === id
+          ? { ...e, data: { ...e.data, delay: !e.data?.delay } as CLDEdgeData }
+          : e
+      ) as CLDEdge[]
+      return { edges, past, future: [] }
+    })
+  },
+
   // Not tracked in history (called on every pointer-move during drag)
   updateEdgeControlPoint: (id, cp) => {
     set((state) => ({
@@ -269,7 +283,7 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
         if (e.id !== id) return e
         const data: CLDEdgeData = cp
           ? { ...e.data!, controlPoint: cp }
-          : { polarity: e.data?.polarity ?? '+' }
+          : { polarity: e.data?.polarity ?? '+', delay: e.data?.delay }
         return { ...e, data }
       }) as CLDEdge[],
     }))

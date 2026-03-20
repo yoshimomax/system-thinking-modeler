@@ -12,7 +12,7 @@ export default function SidePanel({ isOpen, onToggle }: Props) {
     loops, nodes, edges,
     selectedNodeId, selectedEdgeId, selectedLoopId,
     updateNodeLabel, deleteNode, deleteEdge,
-    setSelectedLoop, updateLoopName,
+    toggleEdgeDelay, setSelectedLoop, updateLoopName,
   } = useDiagramStore()
 
   const selectedNode = nodes.find((n) => n.id === selectedNodeId)
@@ -95,6 +95,24 @@ export default function SidePanel({ isOpen, onToggle }: Props) {
             <p className="text-xs text-gray-500">
               ラベルをクリックすると極性を切り替えられます
             </p>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-700">遅延</span>
+              <button
+                onClick={() => toggleEdgeDelay(selectedEdge.id)}
+                className={[
+                  'relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none',
+                  selectedEdge.data?.delay ? 'bg-amber-500' : 'bg-gray-300',
+                ].join(' ')}
+                title="遅延のオン/オフ"
+              >
+                <span
+                  className={[
+                    'inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform',
+                    selectedEdge.data?.delay ? 'translate-x-4' : 'translate-x-1',
+                  ].join(' ')}
+                />
+              </button>
+            </div>
             <button
               onClick={() => deleteEdge(selectedEdge.id)}
               className="text-xs text-red-600 hover:text-red-800 text-left"
@@ -165,6 +183,7 @@ export default function SidePanel({ isOpen, onToggle }: Props) {
           <ul className="text-xs text-gray-600 space-y-1">
             <li><span className="text-green-600 font-bold">+</span> 同方向（強化）</li>
             <li><span className="text-red-600 font-bold">−</span> 逆方向（抑制）</li>
+            <li><span className="text-amber-600 font-bold">‖</span> 遅延あり</li>
             <li><span className="text-orange-600 font-bold">R</span> 強化ループ</li>
             <li><span className="text-blue-600 font-bold">B</span> 均衡ループ</li>
             <li className="pt-1 text-gray-400">ノードをダブルクリックで編集</li>

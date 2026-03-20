@@ -103,6 +103,7 @@ function CLDEdge({
 
   const polarity = data?.polarity ?? '+'
   const isPositive = polarity === '+'
+  const delay = data?.delay ?? false
   const strokeColor = isLoopHighlighted ? '#374151' : '#9ca3af'  // gray-700 highlighted, gray-400 normal
 
   // Drag state — must be declared before any early return
@@ -258,6 +259,41 @@ function CLDEdge({
         fill={strokeColor}
         style={{ pointerEvents: 'none' }}
       />
+      {/* Delay marker: two parallel lines perpendicular to edge at t=0.65 */}
+      {delay && (() => {
+        const t = 0.65
+        const mp = bezierPoint(t, srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy)
+        const tan = bezierTangent(t, srcCx, srcCy, qcpX, qcpY, tgtCx, tgtCy)
+        const px = -tan.y
+        const py = tan.x
+        const lineLen = 7
+        const lineGap = 3.5
+        const delayStroke = selected ? '#3b82f6' : strokeColor
+        return (
+          <>
+            <line
+              x1={mp.x - tan.x * lineGap - px * lineLen}
+              y1={mp.y - tan.y * lineGap - py * lineLen}
+              x2={mp.x - tan.x * lineGap + px * lineLen}
+              y2={mp.y - tan.y * lineGap + py * lineLen}
+              stroke={delayStroke}
+              strokeWidth={2}
+              strokeLinecap="round"
+              style={{ pointerEvents: 'none' }}
+            />
+            <line
+              x1={mp.x + tan.x * lineGap - px * lineLen}
+              y1={mp.y + tan.y * lineGap - py * lineLen}
+              x2={mp.x + tan.x * lineGap + px * lineLen}
+              y2={mp.y + tan.y * lineGap + py * lineLen}
+              stroke={delayStroke}
+              strokeWidth={2}
+              strokeLinecap="round"
+              style={{ pointerEvents: 'none' }}
+            />
+          </>
+        )
+      })()}
 
       <EdgeLabelRenderer>
         {/* Polarity badge — nopan: ReactFlow skips pan logic on this element */}
