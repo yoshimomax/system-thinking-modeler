@@ -1,4 +1,4 @@
-import { memo, useRef } from 'react'
+import { memo, useMemo, useRef } from 'react'
 import { EdgeLabelRenderer, useReactFlow, type EdgeProps } from '@xyflow/react'
 import { useDiagramStore, type CLDEdge as CLDEdgeType } from '../store/diagramStore'
 import { useSimulationStore, selectEdgeSignals } from '../store/simulationStore'
@@ -103,8 +103,8 @@ function CLDEdge({
   })
 
   // Simulation: active signals traveling along this edge (stable ref when empty)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const mySignals = useSimulationStore(selectEdgeSignals(id))
+  const edgeSignalSelector = useMemo(() => selectEdgeSignals(id), [id])
+  const mySignals = useSimulationStore(edgeSignalSelector)
 
   const polarity = data?.polarity ?? '+'
   const isPositive = polarity === '+'
