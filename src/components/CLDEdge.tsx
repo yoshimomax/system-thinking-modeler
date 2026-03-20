@@ -1,4 +1,4 @@
-import { memo, useRef } from 'react'
+import { memo, useRef, useMemo } from 'react'
 import { EdgeLabelRenderer, useReactFlow, type EdgeProps } from '@xyflow/react'
 import { useDiagramStore, type CLDEdge as CLDEdgeType } from '../store/diagramStore'
 import { useSimulationStore, selectEdgeSignals } from '../store/simulationStore'
@@ -103,8 +103,12 @@ function CLDEdge({
   })
 
   // Simulation: active signals traveling along this edge (stable ref when empty)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const mySignals = useSimulationStore(selectEdgeSignals(id))
+  // Memoize the selector to keep its function reference stable across renders.
+  // Without this, useSyncExternalStore (Zustand v5) recreates the getSnapshot
+  // wrapper every render, causing React to detect a snapshot change and schedule
+  // a synchronous re-render → infinite loop (React error #185).
+  const signalSelector = useMemo(() => selectEdgeSignals(id), [id])
+  const mySignals = useSimulationStore(signalSelector)
 
   const polarity = data?.polarity ?? '+'
   const isPositive = polarity === '+'
