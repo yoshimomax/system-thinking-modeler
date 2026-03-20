@@ -13,7 +13,7 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
     loops, nodes, edges,
     selectedNodeId, selectedEdgeId, selectedLoopId,
     updateNodeLabel, deleteNode, deleteEdge,
-    setSelectedLoop, updateLoopName,
+    toggleEdgeDelay, setSelectedLoop, updateLoopName,
   } = useDiagramStore()
 
   const [legendOpen, setLegendOpen] = useState(false)
@@ -119,6 +119,24 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
                     {nodes.find((n) => n.id === selectedEdge.target)?.data.label ?? selectedEdge.target}
                   </span>
                 </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-gray-600">遅延</span>
+                  <button
+                    onClick={() => toggleEdgeDelay(selectedEdge.id)}
+                    className={[
+                      'relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none',
+                      selectedEdge.data?.delay ? 'bg-amber-500' : 'bg-gray-300',
+                    ].join(' ')}
+                    title="遅延のオン/オフ"
+                  >
+                    <span
+                      className={[
+                        'inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform',
+                        selectedEdge.data?.delay ? 'translate-x-6' : 'translate-x-1',
+                      ].join(' ')}
+                    />
+                  </button>
+                </div>
                 <button
                   onClick={() => { deleteEdge(selectedEdge.id); onClose() }}
                   className="text-sm text-red-500 font-medium text-left py-1"
@@ -187,6 +205,7 @@ export default function BottomSheet({ isOpen, onClose }: Props) {
               <ul className="text-sm text-gray-600 space-y-1.5 mt-2">
                 <li><span className="text-green-600 font-bold">＋</span> 同方向（強化）</li>
                 <li><span className="text-red-600 font-bold">−</span> 逆方向（抑制）</li>
+                <li><span className="text-amber-600 font-bold">‖</span> 遅延あり</li>
                 <li><span className="text-orange-600 font-bold">R</span> 強化ループ</li>
                 <li><span className="text-blue-600 font-bold">B</span> 均衡ループ</li>
               </ul>
