@@ -1,7 +1,10 @@
 import { memo, useRef, useMemo } from 'react'
 import { EdgeLabelRenderer, useReactFlow, type EdgeProps } from '@xyflow/react'
 import { useDiagramStore, type CLDEdge as CLDEdgeType } from '../store/diagramStore'
-import { useSimulationStore, selectEdgeSignals } from '../store/simulationStore'
+import { useSimulationStore, type SimSignal } from '../store/simulationStore'
+
+// Module-level stable empty array — shared across all edges when there are no signals
+const EMPTY_SIGNALS: SimSignal[] = []
 
 const DRAG_THRESHOLD = 4
 
@@ -102,12 +105,30 @@ function CLDEdge({
     return false
   })
 
-  // Simulation: active signals traveling along this edge (stable ref when empty)
-  // Memoize the selector to keep its function reference stable across renders.
-  // Without this, useSyncExternalStore (Zustand v5) recreates the getSnapshot
-  // wrapper every render, causing React to detect a snapshot change and schedule
-  // a synchronous re-render → infinite loop (React error #185).
-  const signalSelector = useMemo(() => selectEdgeSignals(id), [id])
+  // Simulation: active signals traveling along this edge.
+  //
+  // Two requirements for correctness with Zustand v5 + React 19:
+  // 1. The selector function must be stable (same reference) across renders so
+  //    useCallback([api, selector]) inside useStore returns a stable getSnapshot.
+  // 2. The selector must return the SAME array reference on successive calls with
+  //    the SAME store state. React 19's layout-effect consistency check calls
+  //    getSnapshot() twice (once during render, once after commit) and compares
+  //    with Object.is. Array.filter() always returns a new reference, so without
+  //    memoization this always triggers forceStoreRerender → infinite loop (#185).
+  //
+  // Fix: cache the last `signals` array reference. If it hasn't changed (same
+  // tick), return the previous filtered result unchanged.
+  const signalSelector = useMemo(() => {
+    let prevSignals: SimSignal[] | undefined
+    let prevResult: SimSignal[] = EMPTY_SIGNALS
+    return (s: { mode: string; signals: SimSignal[] }) => {
+      if (s.mode === 'edit') return (prevResult = EMPTY_SIGNALS)
+      if (s.signals === prevSignals) return prevResult
+      prevSignals = s.signals
+      const filtered = s.signals.filter((sig) => sig.edgeId === id)
+      return (prevResult = filtered.length === 0 ? EMPTY_SIGNALS : filtered)
+    }
+  }, [id])
   const mySignals = useSimulationStore(signalSelector)
 
   const polarity = data?.polarity ?? '+'
