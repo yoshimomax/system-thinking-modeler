@@ -20,6 +20,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   const { updateNodeLabel, setSelectedNode, pendingEditNodeId, clearPendingEdit } = useDiagramStore()
   const { updateNode } = useReactFlow()
   const edges = useDiagramStore((s) => s.edges)
+  const isMobile = window.innerWidth < 768
 
   const isLoopHighlighted = useDiagramStore((state) => {
     if (!state.selectedLoopId) return false
@@ -108,14 +109,29 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     <div style={{ position: 'relative', display: 'inline-block' }}>
 
       {/* ── Handles (outside overflow clipping) ── */}
+      {/* Mobile: 44px touch targets (32px outside + 12px inside). Desktop: 14px strips. */}
       <Handle type="source" position={Position.Top} id="top"
-        style={{ ...edgeHandleBase, width: '100%', height: '14px', top: '-7px', left: 0 }} />
+        style={{ ...edgeHandleBase, width: '100%', height: isMobile ? '44px' : '14px', top: isMobile ? '-32px' : '-7px', left: 0 }} />
       <Handle type="source" position={Position.Right} id="right"
-        style={{ ...edgeHandleBase, width: '14px', height: '100%', right: '-7px', top: 0 }} />
+        style={{ ...edgeHandleBase, width: isMobile ? '44px' : '14px', height: '100%', right: isMobile ? '-32px' : '-7px', top: 0 }} />
       <Handle type="source" position={Position.Bottom} id="bottom"
-        style={{ ...edgeHandleBase, width: '100%', height: '14px', bottom: '-7px', left: 0 }} />
+        style={{ ...edgeHandleBase, width: '100%', height: isMobile ? '44px' : '14px', bottom: isMobile ? '-32px' : '-7px', left: 0 }} />
       <Handle type="source" position={Position.Left} id="left"
-        style={{ ...edgeHandleBase, width: '14px', height: '100%', left: '-7px', top: 0 }} />
+        style={{ ...edgeHandleBase, width: isMobile ? '44px' : '14px', height: '100%', left: isMobile ? '-32px' : '-7px', top: 0 }} />
+
+      {/* ── Mobile connection dot indicators (edit mode only) ── */}
+      {isMobile && simMode === 'edit' && (
+        <>
+          {/* Top dot */}
+          <div style={{ position: 'absolute', top: '-16px', left: '50%', transform: 'translateX(-50%)', width: 10, height: 10, borderRadius: '50%', background: '#9ca3af', border: '2px solid white', pointerEvents: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+          {/* Right dot */}
+          <div style={{ position: 'absolute', right: '-16px', top: '50%', transform: 'translateY(-50%)', width: 10, height: 10, borderRadius: '50%', background: '#9ca3af', border: '2px solid white', pointerEvents: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+          {/* Bottom dot */}
+          <div style={{ position: 'absolute', bottom: '-16px', left: '50%', transform: 'translateX(-50%)', width: 10, height: 10, borderRadius: '50%', background: '#9ca3af', border: '2px solid white', pointerEvents: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+          {/* Left dot */}
+          <div style={{ position: 'absolute', left: '-16px', top: '50%', transform: 'translateY(-50%)', width: 10, height: 10, borderRadius: '50%', background: '#9ca3af', border: '2px solid white', pointerEvents: 'none', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
+        </>
+      )}
 
       {/* ── Pill (overflow-hidden to clip the fill) ── */}
       <div
