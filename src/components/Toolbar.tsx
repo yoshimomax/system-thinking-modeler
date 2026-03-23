@@ -5,7 +5,7 @@ import { useSimulationStore } from '../store/simulationStore'
 import { useUiStore } from '../store/uiStore'
 
 export default function Toolbar() {
-  const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
+  const { addNode, clearDiagram, loadDiagram, clearImportWarning, importWarning, nodes, edges } = useDiagramStore()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { fitView } = useReactFlow()
   const { mode, setMode } = useSimulationStore()
@@ -58,7 +58,21 @@ export default function Toolbar() {
   }
 
   return (
-    <header className="flex items-center gap-2 px-4 py-2 bg-white border-b border-gray-200 shadow-sm">
+    <header className="flex flex-col bg-white border-b border-gray-200 shadow-sm">
+      {importWarning && (
+        <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs">
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4.5zm0 6.5a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5z"/>
+          </svg>
+          <span>読み込み時にデータを自動修正しました：{importWarning}</span>
+          <button
+            onClick={clearImportWarning}
+            className="ml-auto text-amber-600 hover:text-amber-900"
+            aria-label="閉じる"
+          >✕</button>
+        </div>
+      )}
+      <div className="flex items-center gap-2 px-4 py-2">
       <span className="font-bold text-gray-800 mr-2">CLD エディタ</span>
 
       {/* Mode toggle */}
@@ -161,6 +175,7 @@ export default function Toolbar() {
           </button>
         </>
       )}
+      </div>
     </header>
   )
 }

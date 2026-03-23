@@ -10,7 +10,7 @@ interface Props {
 }
 
 export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
-  const { addNode, clearDiagram, loadDiagram, nodes, edges } = useDiagramStore()
+  const { addNode, clearDiagram, loadDiagram, clearImportWarning, importWarning, nodes, edges } = useDiagramStore()
   const { fitView } = useReactFlow()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const { mode, setMode } = useSimulationStore()
@@ -60,6 +60,15 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-50" style={{ paddingBottom: 'env(safe-area-inset-bottom)', touchAction: 'manipulation' }}>
+      {importWarning && (
+        <div className="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border-b border-amber-200 text-amber-800 text-xs">
+          <svg className="w-3.5 h-3.5 shrink-0" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zm0 3.5a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4.5zm0 6.5a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5z"/>
+          </svg>
+          <span className="flex-1">自動修正：{importWarning}</span>
+          <button onClick={clearImportWarning} className="text-amber-600 hover:text-amber-900" aria-label="閉じる">✕</button>
+        </div>
+      )}
       <div className="flex items-center justify-around">
 
         {/* Simulation mode toggle */}
@@ -169,6 +178,8 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
           </svg>
           <span className="text-[10px] mt-0.5 font-medium">パネル</span>
         </button>
+
+      </div>
 
       </div>
 

@@ -46,6 +46,8 @@ interface DiagramState {
   pendingEditNodeId: string | null
   past: Snapshot[]
   future: Snapshot[]
+  /** Non-null when the last loadDiagram call removed invalid data (self-loops, duplicate IDs). */
+  importWarning: string | null
 
   onNodesChange: (changes: NodeChange[]) => void
   onEdgesChange: (changes: EdgeChange[]) => void
@@ -66,6 +68,7 @@ interface DiagramState {
   setSelectedLoop: (id: string | null) => void
   clearPendingEdit: () => void
   updateLoopName: (id: string, name: string) => void
+  clearImportWarning: () => void
 
   undo: () => void
   redo: () => void
@@ -164,6 +167,7 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   pendingEditNodeId: null,
   past: [],
   future: [],
+  importWarning: null,
 
   onNodesChange: (changes) => {
     set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as CLDNode[] }))
@@ -356,16 +360,51 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   },
 
   loadDiagram: (nodes, edges) => {
+    // --- Sanitize imported data ---
+    const warnings: string[] = []
+
+    // 1. Deduplicate nodes by ID (keep first occurrence)
+    const seenNodeIds = new Set<string>()
+    const cleanNodes = nodes.filter((n) => {
+      if (seenNodeIds.has(n.id)) return false
+      seenNodeIds.add(n.id)
+      return true
+    })
+    if (cleanNodes.length < nodes.length) {
+      warnings.push(`重複ノード ID を ${nodes.length - cleanNodes.length} 件除去しました`)
+    }
+
+    // 2. Remove self-loop edges (source === target).
+    //    In a CLD a variable cannot be its own direct cause; self-loops are
+    //    always accidental and break signal propagation simulation.
+    const cleanEdges = edges.filter((e) => e.source !== e.target)
+    if (cleanEdges.length < edges.length) {
+      warnings.push(`自己ループ辺を ${edges.length - cleanEdges.length} 件除去しました`)
+    }
+
     // Advance nodeCounter past any existing node IDs to prevent collisions
-    nodes.forEach((n) => {
+    cleanNodes.forEach((n) => {
       const m = n.id.match(/^node-(\d+)$/)
       if (m) nodeCounter = Math.max(nodeCounter, parseInt(m[1]) + 1)
     })
+
     const state = get()
     const past = [...state.past.slice(-MAX_HISTORY + 1), { nodes: state.nodes, edges: state.edges }]
-    const loops = detectFeedbackLoops(nodes, edges)
-    set({ nodes, edges, loops, selectedNodeId: null, selectedEdgeId: null, selectedLoopId: null, past, future: [] })
+    const loops = detectFeedbackLoops(cleanNodes, cleanEdges)
+    set({
+      nodes: cleanNodes,
+      edges: cleanEdges,
+      loops,
+      selectedNodeId: null,
+      selectedEdgeId: null,
+      selectedLoopId: null,
+      past,
+      future: [],
+      importWarning: warnings.length > 0 ? warnings.join('・') : null,
+    })
   },
+
+  clearImportWarning: () => set({ importWarning: null }),
 
   clearDiagram: () => {
     const state = get()
