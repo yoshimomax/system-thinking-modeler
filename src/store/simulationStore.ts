@@ -13,11 +13,17 @@ export interface SimSignal {
 }
 
 // ----- Simulation constants -----
-const INJECT_STRENGTH = 0.4
+const INJECT_STRENGTH = 0.06
 const SIGNAL_THRESHOLD = 0.005 // drop signals weaker than this (guards against float drift)
 const DEFAULT_SPEED = 1.4      // edge traversals per second
 /** Hard cap on total active signals to prevent exponential growth in dense graphs */
 const MAX_SIGNALS = 200
+/**
+ * Per-second decay factor for nodeValues.
+ * Keeps fill levels from accumulating to max as looping signals multiply.
+ * newValue = oldValue * (1 - NODE_DECAY * dt)
+ */
+const NODE_DECAY = 0.6
 
 // ---- helpers ----
 function uid() { return Math.random().toString(36).slice(2, 9) }
@@ -86,10 +92,15 @@ export const useSimulationStore = create<SimulationState>((set) => ({
       if (state.signals.length === 0) return state
 
       const advance = dt * state.signalSpeed
+      const decayFactor = 1 - NODE_DECAY * dt
       const kept: SimSignal[] = []
       const spawned: SimSignal[] = []
-      // Copy nodeValues only when a signal actually arrives (copy-on-write)
-      let values = state.nodeValues
+      // Apply decay to all current nodeValues first (always a new object)
+      const values: Record<string, number> = {}
+      for (const [k, v] of Object.entries(state.nodeValues)) {
+        const decayed = v * decayFactor
+        if (Math.abs(decayed) > 0.001) values[k] = decayed
+      }
 
       for (const sig of state.signals) {
         const newProgress = sig.progress + advance
@@ -101,7 +112,6 @@ export const useSimulationStore = create<SimulationState>((set) => ({
         // Signal arrived at target node
         const edge = edges.find((e) => e.id === sig.edgeId)
         if (edge) {
-          if (values === state.nodeValues) values = { ...state.nodeValues }
           values[edge.target] = Math.max(-1, Math.min(1, (values[edge.target] ?? 0) + sig.strength))
 
           // Spawn continuation signals — respect the cap to prevent runaway growth
