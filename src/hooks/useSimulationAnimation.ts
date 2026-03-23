@@ -25,9 +25,12 @@ export function useSimulationAnimation() {
     let last = performance.now()
 
     const tick = (now: number) => {
-      const dt = Math.min((now - last) / 1000, 0.05) // cap at 50 ms to avoid large jumps
+      const { paused } = useSimulationStore.getState()
+      if (!paused) {
+        const dt = Math.min((now - last) / 1000, 0.05) // cap at 50 ms to avoid large jumps
+        useSimulationStore.getState().tickSimulation(dt, edgesRef.current)
+      }
       last = now
-      useSimulationStore.getState().tickSimulation(dt, edgesRef.current)
       rafId = requestAnimationFrame(tick)
     }
 
