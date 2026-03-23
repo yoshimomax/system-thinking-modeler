@@ -10,7 +10,7 @@ const SPEED_OPTIONS = [
 export default function SimulationPanel() {
   useSimulationAnimation()
 
-  const { signalSpeed, resetSimulation, setSignalSpeed } = useSimulationStore()
+  const { signalSpeed, paused, togglePause, resetSimulation, setSignalSpeed } = useSimulationStore()
 
   return (
     <div className="flex flex-col gap-3">
@@ -43,13 +43,26 @@ export default function SimulationPanel() {
         </div>
       </div>
 
-      {/* Reset */}
-      <button
-        onClick={resetSimulation}
-        className="w-full px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded hover:bg-gray-100"
-      >
-        ⟳ リセット
-      </button>
+      {/* Pause / Reset */}
+      <div className="flex gap-2">
+        <button
+          onClick={togglePause}
+          className={[
+            'flex-1 px-3 py-1.5 text-xs font-medium rounded border transition-colors',
+            paused
+              ? 'bg-indigo-600 text-white border-indigo-600 hover:bg-indigo-700'
+              : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-100',
+          ].join(' ')}
+        >
+          {paused ? '▶ 再開' : '⏸ 一時停止'}
+        </button>
+        <button
+          onClick={resetSimulation}
+          className="flex-1 px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded hover:bg-gray-100"
+        >
+          ⟳ リセット
+        </button>
+      </div>
 
       {/* Legend */}
       <div className="text-xs text-gray-400 space-y-0.5">

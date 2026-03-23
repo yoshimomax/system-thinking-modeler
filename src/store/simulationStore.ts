@@ -40,12 +40,14 @@ function spawnSignals(
 
 interface SimulationState {
   mode: SimMode
+  paused: boolean
   nodeValues: Record<string, number>   // clamped to [-1, 1]
   signals: SimSignal[]
   signalSpeed: number                  // traversals / second
 
   // actions
   setMode: (mode: SimMode) => void
+  togglePause: () => void
   injectSignal: (nodeId: string, direction: 'up' | 'down', edges: CLDEdge[]) => void
   tickSimulation: (dt: number, edges: CLDEdge[]) => void
   resetSimulation: () => void
@@ -54,17 +56,20 @@ interface SimulationState {
 
 export const useSimulationStore = create<SimulationState>((set) => ({
   mode: 'edit',
+  paused: false,
   nodeValues: {},
   signals: [],
   signalSpeed: DEFAULT_SPEED,
 
   setMode: (mode) => {
     if (mode === 'edit') {
-      set({ mode, nodeValues: {}, signals: [] })
+      set({ mode, paused: false, nodeValues: {}, signals: [] })
     } else {
       set({ mode })
     }
   },
+
+  togglePause: () => set((s) => ({ paused: !s.paused })),
 
   injectSignal: (nodeId, direction, edges) => {
     const strength = direction === 'up' ? INJECT_STRENGTH : -INJECT_STRENGTH
