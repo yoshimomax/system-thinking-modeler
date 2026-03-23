@@ -33,6 +33,13 @@ function spawnSignals(
   visitedEdges: string[],
 ): SimSignal[] {
   const out: SimSignal[] = []
+
+  // Pre-mark ALL outgoing edges of this node as visited.
+  // This prevents a self-loop (or any cycle back to this node) from
+  // re-spawning edges that were already emitted in the same wave.
+  const outgoingIds = edges.filter(e => e.source === sourceNodeId).map(e => e.id)
+  const newVisited = Array.from(new Set([...visitedEdges, ...outgoingIds]))
+
   for (const edge of edges) {
     if (edge.source !== sourceNodeId) continue
     if (visitedEdges.includes(edge.id)) continue   // already traversed — stop here
@@ -44,7 +51,7 @@ function spawnSignals(
       edgeId: edge.id,
       progress: 0,
       strength: s,
-      visitedEdges: [...visitedEdges, edge.id],
+      visitedEdges: newVisited,
     })
   }
   return out
