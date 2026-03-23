@@ -181,8 +181,6 @@ export default function MobileToolbar({ onShowPanel, panelOpen }: Props) {
 
       </div>
 
-      </div>
-
       <input
         ref={fileInputRef}
         type="file"
