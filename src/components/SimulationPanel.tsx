@@ -1,5 +1,4 @@
 import { useSimulationStore } from '../store/simulationStore'
-import { useSimulationAnimation } from '../hooks/useSimulationAnimation'
 
 const SPEED_OPTIONS = [
   { label: '遅い', value: 0.7 },
@@ -8,8 +7,6 @@ const SPEED_OPTIONS = [
 ]
 
 export default function SimulationPanel() {
-  useSimulationAnimation()
-
   const { signalSpeed, paused, togglePause, resetSimulation, setSignalSpeed } = useSimulationStore()
 
   return (

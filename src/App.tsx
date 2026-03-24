@@ -6,6 +6,7 @@ import SidePanel from './components/SidePanel'
 import MobileToolbar from './components/MobileToolbar'
 import BottomSheet from './components/BottomSheet'
 import { useDiagramStore } from './store/diagramStore'
+import { useSimulationAnimation } from './hooks/useSimulationAnimation'
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
@@ -18,6 +19,9 @@ function useIsMobile() {
 }
 
 function AppContent() {
+  // Simulation RAF loop — must live here (always mounted) so it keeps running
+  // even when the side panel (which contains SimulationPanel) is closed.
+  useSimulationAnimation()
   const isMobile = useIsMobile()
   const [panelOpen, setPanelOpen] = useState(false)
   const [sidePanelOpen, setSidePanelOpen] = useState(true)
