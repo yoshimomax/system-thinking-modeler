@@ -1,5 +1,6 @@
 import { create } from 'zustand'
-import type { CLDEdge } from './diagramStore'
+import type { CLDNode, CLDEdge } from './diagramStore'
+import { runSimulation, type NodeSimState } from '../simulation/engine'
 
 export type SimMode = 'edit' | 'simulation'
 
@@ -17,6 +18,9 @@ export interface SimSignal {
    */
   visitedEdges: string[]
 }
+
+// Re-export so consumers can import NodeSimState from a single place
+export type { NodeSimState }
 
 // ----- Simulation constants -----
 const INJECT_STRENGTH = 0.1
@@ -60,14 +64,20 @@ function spawnSignals(
 interface SimulationState {
   mode: SimMode
   paused: boolean
-  nodeValues: Record<string, number>   // clamped to [-1, 1]
+  nodeValues: Record<string, number>              // clamped to [-1, 1]; drives fill animation
   signals: SimSignal[]
-  signalSpeed: number                  // traversals / second
+  signalSpeed: number                             // traversals / second
+
+  /** Active perturbation assumptions for the qualitative engine.
+   *  Clicking ↑/↓ on a node toggles its entry here, then the engine reruns. */
+  perturbations: Record<string, 'up' | 'down'>
+  /** Final converged qualitative state per node, from the BFS engine. */
+  qualStates: Record<string, NodeSimState>
 
   // actions
   setMode: (mode: SimMode) => void
   togglePause: () => void
-  injectSignal: (nodeId: string, direction: 'up' | 'down', edges: CLDEdge[]) => void
+  injectSignal: (nodeId: string, direction: 'up' | 'down', nodes: CLDNode[], edges: CLDEdge[]) => void
   tickSimulation: (dt: number, edges: CLDEdge[]) => void
   resetSimulation: () => void
   setSignalSpeed: (speed: number) => void
@@ -79,10 +89,12 @@ export const useSimulationStore = create<SimulationState>((set) => ({
   nodeValues: {},
   signals: [],
   signalSpeed: DEFAULT_SPEED,
+  perturbations: {},
+  qualStates: {},
 
   setMode: (mode) => {
     if (mode === 'edit') {
-      set({ mode, paused: false, nodeValues: {}, signals: [] })
+      set({ mode, paused: false, nodeValues: {}, signals: [], perturbations: {}, qualStates: {} })
     } else {
       set({ mode })
     }
@@ -90,13 +102,33 @@ export const useSimulationStore = create<SimulationState>((set) => ({
 
   togglePause: () => set((s) => ({ paused: !s.paused })),
 
-  injectSignal: (nodeId, direction, edges) => {
+  injectSignal: (nodeId, direction, nodes, edges) => {
     const strength = direction === 'up' ? INJECT_STRENGTH : -INJECT_STRENGTH
     set((state) => {
+      // ── Particle animation (continuous fill) ──────────────────────────────
       const values = { ...state.nodeValues }
       values[nodeId] = Math.max(-1, Math.min(1, (values[nodeId] ?? 0) + strength))
       const newSigs = spawnSignals(nodeId, strength, edges, [])
-      return { nodeValues: values, signals: [...state.signals, ...newSigs] }
+
+      // ── Qualitative engine (discrete up/down/ambiguous) ───────────────────
+      // Toggle: clicking the same direction removes the perturbation,
+      // clicking the other direction switches it.
+      const newPerturbations = { ...state.perturbations }
+      if (newPerturbations[nodeId] === direction) {
+        delete newPerturbations[nodeId]
+      } else {
+        newPerturbations[nodeId] = direction
+      }
+      const simSteps = runSimulation(nodes, edges, newPerturbations)
+      const qualStates: Record<string, NodeSimState> =
+        simSteps.length > 0 ? simSteps[simSteps.length - 1].states : {}
+
+      return {
+        nodeValues: values,
+        signals: [...state.signals, ...newSigs],
+        perturbations: newPerturbations,
+        qualStates,
+      }
     })
   },
 
@@ -131,6 +163,6 @@ export const useSimulationStore = create<SimulationState>((set) => ({
     })
   },
 
-  resetSimulation: () => set({ nodeValues: {}, signals: [] }),
+  resetSimulation: () => set({ nodeValues: {}, signals: [], perturbations: {}, qualStates: {} }),
   setSignalSpeed: (speed) => set({ signalSpeed: speed }),
 }))

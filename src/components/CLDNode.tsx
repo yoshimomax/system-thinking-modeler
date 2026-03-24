@@ -20,6 +20,7 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   const { updateNodeLabel, setSelectedNode, pendingEditNodeId, clearPendingEdit } = useDiagramStore()
   const { updateNode } = useReactFlow()
   const edges = useDiagramStore((s) => s.edges)
+  const nodes = useDiagramStore((s) => s.nodes)
   const isMobile = window.innerWidth < 768
 
   const isLoopHighlighted = useDiagramStore((state) => {
@@ -32,6 +33,13 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
   // Continuous node value: null in edit mode, number in sim mode
   const nodeValue = useSimulationStore((s) =>
     s.mode === 'edit' ? null : (s.nodeValues[id] ?? 0)
+  )
+  // Qualitative engine results
+  const perturbation = useSimulationStore((s) =>
+    s.mode === 'simulation' ? (s.perturbations[id] ?? null) : null
+  )
+  const qualState = useSimulationStore((s) =>
+    s.mode === 'simulation' ? (s.qualStates[id] ?? 'neutral') : null
   )
   const { injectSignal } = useSimulationStore.getState()
 
@@ -104,9 +112,41 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
     : nodeValue > 0 ? 'border-green-500'
     : 'border-red-500'
 
+  // ---- qualitative state badge config ----
+  const qualBadge: { bg: string; fg: string; label: string } | null =
+    qualState === 'up'        ? { bg: '#16a34a', fg: 'white', label: '↑' }
+    : qualState === 'down'    ? { bg: '#dc2626', fg: 'white', label: '↓' }
+    : qualState === 'ambiguous' ? { bg: '#d97706', fg: 'white', label: '?' }
+    : null
+
   return (
     // Outer wrapper: no overflow-hidden so handles extend outside; pulse stays here
     <div style={{ position: 'relative', display: 'inline-block' }}>
+
+      {/* ── Qualitative state badge (shown above the node in sim mode) ── */}
+      {simMode === 'simulation' && qualBadge && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '-20px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            background: qualBadge.bg,
+            color: qualBadge.fg,
+            borderRadius: '999px',
+            fontSize: '11px',
+            fontWeight: 'bold',
+            padding: '1px 7px',
+            whiteSpace: 'nowrap',
+            pointerEvents: 'none',
+            zIndex: 10,
+            boxShadow: '0 1px 3px rgba(0,0,0,0.25)',
+            lineHeight: '16px',
+          }}
+        >
+          {qualBadge.label}
+        </div>
+      )}
 
       {/* ── Handles (outside overflow clipping) ── */}
       {/* Mobile: 44px touch targets (32px outside + 12px inside). Desktop: 14px strips. */}
@@ -227,15 +267,17 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
         >
           <button
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); injectSignal(id, 'up', edges) }}
-            title="増加を注入"
+            onClick={(e) => { e.stopPropagation(); injectSignal(id, 'up', nodes, edges) }}
+            title="増加を注入（再クリックで解除）"
             style={{
               width: '20px', height: '20px',
               borderRadius: '50%',
-              background: '#16a34a',
+              background: perturbation === 'up' ? '#15803d' : '#16a34a',
               color: 'white',
-              border: '2px solid white',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              border: perturbation === 'up' ? '2px solid #bbf7d0' : '2px solid white',
+              boxShadow: perturbation === 'up'
+                ? '0 0 0 2px #16a34a, 0 1px 4px rgba(0,0,0,0.3)'
+                : '0 1px 4px rgba(0,0,0,0.3)',
               cursor: 'pointer',
               fontSize: '13px',
               fontWeight: 'bold',
@@ -248,15 +290,17 @@ function CLDNode({ id, data, selected }: NodeProps<CLDNodeType>) {
           >↑</button>
           <button
             onPointerDown={(e) => e.stopPropagation()}
-            onClick={(e) => { e.stopPropagation(); injectSignal(id, 'down', edges) }}
-            title="減少を注入"
+            onClick={(e) => { e.stopPropagation(); injectSignal(id, 'down', nodes, edges) }}
+            title="減少を注入（再クリックで解除）"
             style={{
               width: '20px', height: '20px',
               borderRadius: '50%',
-              background: '#dc2626',
+              background: perturbation === 'down' ? '#b91c1c' : '#dc2626',
               color: 'white',
-              border: '2px solid white',
-              boxShadow: '0 1px 4px rgba(0,0,0,0.3)',
+              border: perturbation === 'down' ? '2px solid #fecaca' : '2px solid white',
+              boxShadow: perturbation === 'down'
+                ? '0 0 0 2px #dc2626, 0 1px 4px rgba(0,0,0,0.3)'
+                : '0 1px 4px rgba(0,0,0,0.3)',
               cursor: 'pointer',
               fontSize: '13px',
               fontWeight: 'bold',
