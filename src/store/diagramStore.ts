@@ -170,7 +170,55 @@ export const useDiagramStore = create<DiagramState>((set, get) => ({
   importWarning: null,
 
   onNodesChange: (changes) => {
-    set((state) => ({ nodes: applyNodeChanges(changes, state.nodes) as CLDNode[] }))
+    set((state) => {
+      const updatedNodes = applyNodeChanges(changes, state.nodes) as CLDNode[]
+
+      // When nodes are repositioned, adjust connected edge control-point offsets
+      // to keep their absolute canvas position fixed (the curve shape changes
+      // relative to the nodes, but does not "jump" to follow the midpoint).
+      const posChanges = changes.filter(
+        (c): c is NodeChange & { type: 'position'; position: { x: number; y: number } } =>
+          c.type === 'position' && 'position' in c && c.position != null
+      )
+      if (posChanges.length === 0) return { nodes: updatedNodes }
+
+      // Build center-delta map: nodeId → how much its center moved
+      const deltas = new Map<string, { dx: number; dy: number }>()
+      for (const change of posChanges) {
+        const old = state.nodes.find((n) => n.id === change.id)
+        if (!old) continue
+        const w = old.measured?.width ?? 80
+        const h = old.measured?.height ?? 36
+        deltas.set(change.id, {
+          dx: change.position.x - old.position.x,
+          dy: change.position.y - old.position.y,
+        })
+        void w; void h  // measured size is the same before/after a position-only change
+      }
+
+      // For each edge with a stored control-point offset, compensate for how much
+      // the midpoint of that edge moved so the absolute CP position stays constant.
+      const updatedEdges = state.edges.map((edge) => {
+        if (!edge.data?.controlPoint) return edge
+        const sd = deltas.get(edge.source) ?? { dx: 0, dy: 0 }
+        const td = deltas.get(edge.target) ?? { dx: 0, dy: 0 }
+        const midDx = (sd.dx + td.dx) / 2
+        const midDy = (sd.dy + td.dy) / 2
+        if (midDx === 0 && midDy === 0) return edge
+        return {
+          ...edge,
+          data: {
+            ...edge.data,
+            controlPoint: {
+              x: edge.data.controlPoint.x - midDx,
+              y: edge.data.controlPoint.y - midDy,
+            },
+          },
+        }
+      })
+
+      return { nodes: updatedNodes, edges: updatedEdges }
+    })
   },
 
   onEdgesChange: (changes) => {

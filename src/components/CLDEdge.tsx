@@ -185,7 +185,7 @@ function CLDEdge({
   const qcpX = 2 * cx - 0.5 * (srcCx + tgtCx)
   const qcpY = 2 * cy - 0.5 * (srcCy + tgtCy)
 
-  // Path: source center → target center
+  // Full path (source center → target center): used only for the wide invisible hit area
   const edgePath = `M ${srcCx} ${srcCy} Q ${qcpX} ${qcpY} ${tgtCx} ${tgtCy}`
 
   // Arrowhead: exact bezier–stadium (rounded-rectangle) intersection
@@ -203,6 +203,12 @@ function CLDEdge({
     !Number.isFinite(arrowDir.x) || !Number.isFinite(arrowDir.y) ||
     !Number.isFinite(qcpX)       || !Number.isFinite(qcpY)
   ) return null
+
+  // Visible path: clip at the target node boundary (de Casteljau subdivision at arrowT).
+  // This prevents the edge line from peeking out behind the arrowhead at the node edge.
+  const visibleCtrlX = srcCx + arrowT * (qcpX - srcCx)
+  const visibleCtrlY = srcCy + arrowT * (qcpY - srcCy)
+  const visiblePath = `M ${srcCx} ${srcCy} Q ${visibleCtrlX} ${visibleCtrlY} ${arrowPos.x} ${arrowPos.y}`
 
   const arrowLen = 11
   const arrowHW = 5
@@ -271,10 +277,10 @@ function CLDEdge({
         onClick={() => setSelectedEdge(id)}
         style={{ cursor: 'pointer' }}
       />
-      {/* Visible edge line */}
+      {/* Visible edge line — clipped at target node boundary to hide line behind arrowhead */}
       <path
         id={id}
-        d={edgePath}
+        d={visiblePath}
         fill="none"
         className="react-flow__edge-path"
         style={{
